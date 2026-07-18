@@ -1,0 +1,310 @@
+======================================================================
+ Deuce Market (테니스 용품 중고거래 플랫폼) 보안 체크리스트
+ WHS Secure Coding 과제 — 기능/보안 요소 점검표
+======================================================================
+ 표기:  [O] 충족   [!] 부분 충족 / 운영 배포 시 적용   [X] 미구현(보완 대상)
+ 형식:  Section / Checklist Item / Description / 상태 / 구현 위치
+======================================================================
+
+
+[0] 공통 · 인프라 보안 (전 페이지 공통)
+----------------------------------------------------------------------
+[O] SQL Injection 방지
+    모든 DB 쿼리를 파라미터 바인딩(?)으로 처리하여 문자열 결합 쿼리를 배제.
+    구현: app/db.py 및 모든 블루프린트의 execute(sql, params)
+
+[O] XSS 방지 (출력 인코딩)
+    Jinja2 자동 이스케이프로 사용자 입력 출력 시 HTML 이스케이프. 전체 채팅
+    폴링은 textContent 로만 DOM 삽입(innerHTML 미사용).
+    구현: 템플릿 전반, app/static/js/app.js(bindGlobalChat)
+
+[O] CSRF 방지
+    Flask-WTF CSRFProtect 전역 적용. 폼(hidden csrf_token) 및 fetch(X-CSRFToken
+    헤더) 모두 검증. 토큰 없는 POST 는 400.
+    구현: app/__init__.py(csrf.init_app), 각 form/fetch
+
+[O] 보안 응답 헤더
+    Content-Security-Policy(script-src 'self' 등), X-Frame-Options: DENY,
+    X-Content-Type-Options: nosniff, Referrer-Policy 적용(외부 CDN 미사용).
+    구현: app/__init__.py after_request
+
+[O] 민감정보 하드코딩 방지
+    SECRET_KEY 등 비밀값을 .env 환경변수로 분리, 운영 환경에서 미설정 시 예외.
+    구현: config.py(_get_secret_key), .env.example
+
+[O] 디버그/오류 정보 노출 방지
+    DEBUG 는 개발 환경에서만 활성, 운영 기본 off → 스택 트레이스/내부 경로 미노출.
+    구현: run.py, config.py
+
+[!] 전송 구간 암호화 (HTTPS/TLS)
+    운영 배포 시 HTTPS 및 SESSION_COOKIE_SECURE=True 적용 필요(전체 채팅 포함).
+    개발 환경은 HTTP. 구현: config.py(SESSION_COOKIE_SECURE 옵션 제공)
+
+
+[1] 회원가입 및 프로필 관리
+----------------------------------------------------------------------
+[O] 서버측 입력 검증
+    username(영문/숫자/밑줄 4~20자), password(8자 이상) 형식을 서버에서 검증.
+    구현: app/auth.py(_validate_credentials, USERNAME_RE)
+
+[O] 아이디 중복 방지
+    가입 시 username UNIQUE 확인 및 DB UNIQUE 제약.
+    구현: app/auth.py(register), app/schema.sql(user.username UNIQUE)
+
+[O] 비밀번호 보안 (해싱)
+    평문 저장 금지. Werkzeug generate_password_hash(PBKDF2+salt)로 저장.
+    구현: app/auth.py(register, change_password)
+
+[O] CSRF 보호
+    회원가입/로그인/프로필 수정 등 모든 POST 에 CSRF 토큰 검증.
+    구현: 각 auth 템플릿 + CSRFProtect
+
+[O] 세션 쿠키 설정
+    HttpOnly(JS 접근 차단), SameSite=Lax, (운영)Secure 적용.
+    구현: config.py
+
+[O] 세션 고정 공격 방지
+    로그인 성공 시 session.clear() 후 새 세션 발급.
+    구현: app/auth.py(login)
+
+[O] 사용자 열거(enumeration) 방지
+    아이디 존재 여부와 무관하게 동일한 로그인 실패 메시지 반환.
+    구현: app/auth.py(login)
+
+[O] 휴면 계정 접근 차단
+    is_active=0 계정은 로그인 거부 및 요청 시 자동 로그아웃.
+    구현: app/auth.py(login), app/security.py(load_logged_in_user)
+
+[O] 비밀번호 변경 시 현재 비밀번호 확인
+    마이페이지 비밀번호 변경은 현재 비밀번호 검증 후 처리.
+    구현: app/auth.py(profile)
+
+[O] 오류 메시지 정보 최소화
+    입력 오류 시 내부 정보(스택/쿼리) 노출 없이 사용자 메시지만 표시.
+    구현: flash 메시지 + DEBUG off
+
+[X] 세션 만료(timeout) 및 재인증
+    일정 시간 이후 세션 만료(PERMANENT_SESSION_LIFETIME) 미설정. 보완 대상.
+
+[X] 로그인 실패 방어 (계정 잠금 / Rate Limiting)
+    로그인 실패 횟수 기반 지연/잠금 미구현. 무차별 대입 대비 보완 대상.
+
+
+[2] 상품 등록 및 관리
+----------------------------------------------------------------------
+[O] 폼 입력 검증
+    제목 길이(≤100), 가격(정수·음수 불가·상한), 카테고리 화이트리스트 서버 검증.
+    구현: app/products.py(new)
+
+[O] XSS 방어
+    상품명/설명 등 사용자 입력은 Jinja2 자동 이스케이프로 출력.
+    구현: products 템플릿
+
+[O] 인증된 사용자만 등록/삭제
+    상품 등록·삭제는 login_required 로 보호.
+    구현: app/products.py(new, delete)
+
+[O] 소유자 확인 (IDOR 방지)
+    상품 삭제 시 요청자가 소유자(또는 관리자)인지 검증.
+    구현: app/products.py(delete)
+
+[O] 데이터 무결성
+    가격 CHECK(price>=0) 등 스키마 제약, 판매자 FK 연결.
+    구현: app/schema.sql(product)
+
+[O] 차단 상품 노출 제외
+    status='blocked' 상품은 목록/상세/검색에서 제외.
+    구현: app/products.py(index, detail)
+
+
+[3] 파일 업로드 (상품 사진 · 채팅 사진 공용)
+----------------------------------------------------------------------
+[O] 확장자 화이트리스트
+    png/jpg/jpeg/gif/webp 만 허용. 원본 파일명에서 확장자 추출·검증.
+    구현: app/uploads.py(save_image)
+
+[O] 파일명 무작위 재생성
+    원본 파일명 미신뢰, token_hex 무작위 파일명으로 저장(경로 조작/덮어쓰기 방지).
+    한글 등 비ASCII 파일명도 안전 처리.
+    구현: app/uploads.py
+
+[O] 업로드 용량 제한
+    MAX_CONTENT_LENGTH 5MB 제한.
+    구현: config.py
+
+[!] 파일 내용(MIME) 검증
+    현재 확장자 기반 검증. 이미지 매직바이트/실제 MIME 검증은 미적용(보완 여지).
+
+
+[4] 찜(좋아요)
+----------------------------------------------------------------------
+[O] 인증된 사용자만 사용
+    찜 토글/목록은 login_required.
+    구현: app/favorites.py
+
+[O] CSRF 보호
+    찜 토글 fetch 에 X-CSRFToken 검증.
+    구현: app/favorites.py(toggle), app.js
+
+[O] 대상 유효성 검증
+    존재하는 상품에 대해서만 처리, UNIQUE(user_id, product_id) 중복 방지.
+    구현: app/favorites.py, app/schema.sql(favorite)
+
+
+[5] 1:1 채팅 및 메시지
+----------------------------------------------------------------------
+[O] 채팅방 접근 제어 (IDOR 방지)
+    채팅방은 참여자(구매자/판매자)만 접근, 그 외 403.
+    구현: app/chat.py(_get_conversation)
+
+[O] 메시지 수정/삭제 권한 (IDOR 방지)
+    본인이 보낸 메시지만 수정/삭제 가능, 그 외 403.
+    구현: app/chat.py(_load_message_for_owner)
+
+[O] 메시지 내용 검증
+    빈 메시지 차단, 길이 제한(≤1000), 사진 또는 본문 필요.
+    구현: app/chat.py(room)
+
+[O] CSRF 보호
+    전송/수정/삭제/공감 fetch 및 폼에 CSRF 검증.
+    구현: app/chat.py + app.js
+
+[O] XSS 방어
+    메시지 출력 자동 이스케이프.
+    구현: chat/room.html
+
+[O] 사진 업로드 검증
+    채팅 사진도 공용 업로드 유틸(확장자/파일명) 적용.
+    구현: app/chat.py(room) + app/uploads.py
+
+[O] 삭제 처리 방식
+    소프트 삭제(내용 감춤)로 "삭제된 메시지입니다" 표시.
+    구현: app/chat.py(delete_message)
+
+[X] 메시지 Rate Limiting (도배 방지)
+    단시간 대량 전송 제한 미구현. 보완 대상.
+
+
+[6] 실시간 전체 채팅
+----------------------------------------------------------------------
+[O] 인증된 사용자만 참여
+    전체 채팅 조회/전송은 login_required.
+    구현: app/chat.py(global_room, global_send)
+
+[O] 메시지 내용 검증
+    빈 메시지 차단, 길이 제한(≤1000) 서버 검증.
+    구현: app/chat.py(global_send)
+
+[O] CSRF 보호
+    전송(fetch)에 X-CSRFToken 검증. 토큰 없으면 400.
+    구현: app/chat.py(global_send), app.js
+
+[O] XSS 방어
+    초기 렌더 자동 이스케이프 + 폴링 수신 시 textContent 삽입(스크립트 미실행).
+    구현: chat/global.html, app.js(bindGlobalChat)
+
+[!] 연결 암호화
+    실시간 갱신은 동일 출처 AJAX 폴링(2초). 운영 배포 시 HTTPS 로 전송 보호.
+    구현: app.js, (운영)config.py SESSION_COOKIE_SECURE
+
+[X] Rate Limiting (스팸 방지)
+    전체 채팅 도배/스팸 제한 미구현. 보완 대상.
+
+
+[7] 안전 거래 (유저 간 송금)
+----------------------------------------------------------------------
+[O] 폼 입력 검증
+    금액 정수·양수·상한 검증(문자/음수/0 차단).
+    구현: app/transfer.py(_parse_amount)
+
+[O] 인증된 사용자만 접근
+    송금/결제 페이지 login_required.
+    구현: app/transfer.py
+
+[O] 본인 송금 차단
+    자기 자신에게 송금 불가.
+    구현: app/transfer.py(index, pay)
+
+[O] 받는 사람 검증
+    존재/활성 계정 확인. 구매(pay)는 받는 사람을 상품 판매자로 서버가 결정
+    (사용자 입력 미신뢰).
+    구현: app/transfer.py(pay)
+
+[O] 잔액 검증 · 이중지불 방지
+    'balance >= amount' 조건부 차감(UPDATE ... WHERE balance>=?)으로 동시 요청/
+    음수 잔액/이중지불 방지.
+    구현: app/transfer.py(_execute_transfer)
+
+[O] 트랜잭션 원자성 (실패 시 롤백)
+    차감 실패 시 rollback, 성공 시에만 커밋 및 내역 기록.
+    구현: app/transfer.py(_execute_transfer)
+
+[O] 거래 내역 기록
+    송금 성공 시 transfer 테이블에 기록(사용자 거래내역 조회 제공).
+    구현: app/transfer.py(index), app/schema.sql(transfer)
+
+[O] CSRF 보호
+    송금 폼에 CSRF 토큰 검증.
+    구현: transfer 템플릿
+
+
+[8] 신고 및 차단
+----------------------------------------------------------------------
+[O] 폼 입력 검증
+    신고 사유 필수/길이(≤500) 검증, target_type 화이트리스트('user'/'product').
+    구현: app/report.py(create), app/schema.sql(report CHECK)
+
+[O] 인증된 사용자만 접근
+    신고는 login_required.
+    구현: app/report.py
+
+[O] 자기/본인상품 신고 차단
+    본인 사용자·본인 상품 신고 불가.
+    구현: app/report.py(create)
+
+[O] 중복 신고 방지
+    동일 사용자의 동일 대상 중복 신고 차단(DB UNIQUE).
+    구현: app/schema.sql(report UNIQUE), app/report.py(IntegrityError 처리)
+
+[O] 신고 남용 대응 · 자동 차단
+    누적 신고 임계값(3회) 초과 시 상품 자동 차단(blocked)/사용자 휴면(is_active=0).
+    구현: app/report.py(_apply_block_if_needed), config.py(REPORT_BLOCK_THRESHOLD)
+
+[O] 데이터 무결성 기록
+    신고 정보(신고자/대상/사유/시각)를 report 테이블에 저장.
+    구현: app/schema.sql(report)
+
+[!] 관리자 조치 감사 로그
+    신고 자체는 기록되나, 관리자 차단/휴면 등 조치 이력의 별도 감사 로그는 미구현.
+
+
+[9] 관리자 기능
+----------------------------------------------------------------------
+[O] 접근 제어 (인가)
+    모든 관리자 라우트 admin_required, 비관리자 접근 403.
+    구현: app/admin.py, app/security.py(admin_required)
+
+[O] 관리자 계정 보호
+    관리자 계정은 휴면 전환 대상에서 제외.
+    구현: app/admin.py(toggle_user)
+
+[O] CSRF 보호
+    유저 휴면/복구, 상품 차단/해제/삭제 등 모든 조치 POST 에 CSRF 검증.
+    구현: admin 템플릿 + CSRFProtect
+
+[O] 관리 기능 완비
+    통계 대시보드, 신고 내역, 사용자 휴면/복구, 상품 차단/해제/삭제.
+    구현: app/admin.py(dashboard, toggle_user, product_status)
+
+
+======================================================================
+ 요약
+----------------------------------------------------------------------
+ [O] 충족             : 대부분의 항목 (기능/보안 핵심 전반)
+ [!] 부분/운영 시 적용 : 전송 암호화(HTTPS), 파일 MIME 검증, 관리자 감사 로그
+ [X] 보완 대상        : 세션 만료(timeout), 로그인 실패 잠금/Rate Limiting,
+                        채팅(1:1·전체) 메시지 Rate Limiting
+
+ → 최소 요구사항(회원/상품/채팅/신고차단/송금/검색/관리자) 및 핵심 보안 요소는
+   모두 충족. [X]/[!] 항목은 심화 보안 강화 및 운영 배포 단계 과제로 문서화.
+======================================================================
