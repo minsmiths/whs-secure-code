@@ -1,8 +1,4 @@
-"""데모용 초기 데이터 삽입 CLI: `flask seed`.
-
-테스트/시연을 위한 관리자 계정과 샘플 테니스 용품을 생성한다.
-관리자 비밀번호는 환경 변수 ADMIN_PASSWORD 로 지정할 수 있다(기본값 제공).
-"""
+"""데모용 초기 데이터 삽입 CLI: `flask seed`."""
 import os
 
 import click
@@ -11,13 +7,31 @@ from werkzeug.security import generate_password_hash
 from .db import get_db
 
 
+# username, password, bio, region, rating
+SAMPLE_USERS = [
+    ("minsmith", "password-1234!", "테니스 8년차, 라켓 컬렉터입니다.", "서울 송파구", 4.9),
+    ("courtking", "password-1234!", "동호회 운영 중. 용품 자주 바꿔요.", "서울 강남구", 4.7),
+    ("baseliner", "password-1234!", "주말 클레이 코트 러버 🎾", "경기 성남시", 4.8),
+]
+
+# title, desc, price, category, brand, condition, usage_period, grip, location, seller(username)
 SAMPLE_PRODUCTS = [
-    ("윌슨 프로스태프 97 v14", "거의 새것, 그립 교체 1회. 헤드 297g", 210000, "라켓"),
-    ("바볼랏 RPM 블라스트 스트링 12m", "미개봉 컷팩", 15000, "스트링"),
-    ("아식스 코트FF3 테니스화 275mm", "3개월 착용, 클레이/하드 겸용", 80000, "테니스화"),
-    ("헤드 투어팀 백팩", "라켓 2개 수납, 신발 칸 분리", 45000, "가방"),
-    ("던롭 포트폴리오 테니스공 3개입", "미개봉 3캔 일괄", 21000, "테니스공"),
-    ("나이키 드라이핏 반팔 티 L", "여름용, 착용감 좋음", 18000, "의류"),
+    ("Yonex EZONE 100 (2022)", "정품, 실사용 6개월. 스크래치 거의 없습니다. 그로밋 양호.",
+     180000, "라켓", "Yonex", "A+", "6개월", "G2", "서울 송파구", "minsmith"),
+    ("Nike Vapor Pro 테니스화 270", "3개월 착용, 아웃솔 상태 좋음. 하드코트용.",
+     85000, "테니스화", "Nike", "A", "3개월", "", "서울 강남구", "courtking"),
+    ("Wilson Pro Staff 97 v14", "페더러 모델. 헤드 297g. 그립 교체 1회.",
+     210000, "라켓", "Wilson", "A", "1년", "G2", "경기 성남시", "baseliner"),
+    ("Babolat RPM Blast 스트링 12m", "미개봉 컷팩. 블랙 1.25mm.",
+     15000, "스트링", "Babolat", "S", "미개봉", "", "서울 송파구", "minsmith"),
+    ("Head 투어팀 라켓백 (라켓 6개)", "라켓 6개 수납, 신발 칸 분리. 사용감 적음.",
+     55000, "가방", "Head", "A", "8개월", "", "서울 강남구", "courtking"),
+    ("Nike 드라이핏 반팔 티 L", "여름용 경량, 착용 5회 미만. 화이트.",
+     22000, "의류", "Nike", "A+", "1개월", "", "경기 성남시", "baseliner"),
+    ("Dunlop Fort 테니스공 3캔", "미개봉 3캔 일괄. 올코트용.",
+     21000, "테니스공", "Dunlop", "S", "미개봉", "", "서울 송파구", "minsmith"),
+    ("Babolat Pure Aero 2023", "나달 모델. 스핀 최강. 실사용 4개월.",
+     195000, "라켓", "Babolat", "A+", "4개월", "G3", "서울 강남구", "courtking"),
 ]
 
 
@@ -26,41 +40,57 @@ def seed_command() -> None:
     db = get_db()
 
     admin_pw = os.environ.get("ADMIN_PASSWORD", "admin-Deuce-2026!")
-    # 관리자 계정
     admin = db.execute("SELECT id FROM user WHERE username = 'admin'").fetchone()
     if admin is None:
         db.execute(
-            "INSERT INTO user (username, password_hash, bio, balance, is_admin) "
+            "INSERT INTO user (username, password_hash, bio, region, is_admin) "
             "VALUES (?, ?, ?, ?, 1)",
-            ("admin", generate_password_hash(admin_pw), "플랫폼 관리자입니다.", 0),
+            ("admin", generate_password_hash(admin_pw), "플랫폼 관리자", "서울"),
         )
         db.commit()
         click.echo(f"관리자 계정 생성: admin / {admin_pw}")
 
-    # 샘플 판매자
-    seller = db.execute("SELECT id FROM user WHERE username = 'tennislover'").fetchone()
-    if seller is None:
-        db.execute(
-            "INSERT INTO user (username, password_hash, bio, balance) VALUES (?, ?, ?, ?)",
-            ("tennislover", generate_password_hash("password-1234!"),
-             "테니스 6년차, 용품 자주 바꿉니다.", 100000),
-        )
-        db.commit()
-    seller_id = db.execute(
-        "SELECT id FROM user WHERE username = 'tennislover'"
-    ).fetchone()["id"]
+    for username, pw, bio, region, rating in SAMPLE_USERS:
+        row = db.execute("SELECT id FROM user WHERE username = ?", (username,)).fetchone()
+        if row is None:
+            db.execute(
+                "INSERT INTO user (username, password_hash, bio, region, rating, balance) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (username, generate_password_hash(pw), bio, region, rating, 500000),
+            )
+    db.commit()
 
-    # 샘플 상품
+    def uid(name):
+        return db.execute("SELECT id FROM user WHERE username = ?", (name,)).fetchone()["id"]
+
     count = db.execute("SELECT COUNT(*) AS c FROM product").fetchone()["c"]
     if count == 0:
-        for title, desc, price, category in SAMPLE_PRODUCTS:
+        for (title, desc, price, cat, brand, cond, period, grip, loc, seller) in SAMPLE_PRODUCTS:
             db.execute(
-                "INSERT INTO product (title, description, price, category, seller_id) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (title, desc, price, category, seller_id),
+                "INSERT INTO product (title, description, price, category, brand, "
+                "condition_grade, usage_period, grip, location, seller_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (title, desc, price, cat, brand, cond, period, grip, loc, uid(seller)),
             )
         db.commit()
         click.echo(f"샘플 상품 {len(SAMPLE_PRODUCTS)}개 생성 완료")
+
+    # 샘플 전체 채팅 메시지
+    mcount = db.execute(
+        "SELECT COUNT(*) AS c FROM message WHERE recipient_id IS NULL"
+    ).fetchone()["c"]
+    if mcount == 0:
+        chats = [
+            ("courtking", "안녕하세요! 다들 어느 코트 다니세요?"),
+            ("baseliner", "저는 주로 올림픽공원 쪽이요 🎾"),
+            ("minsmith", "EZONE 방금 올렸어요~ 관심 있으시면 채팅 주세요!"),
+        ]
+        for name, body in chats:
+            db.execute(
+                "INSERT INTO message (sender_id, recipient_id, body) VALUES (?, NULL, ?)",
+                (uid(name), body),
+            )
+        db.commit()
 
     click.echo("시드 데이터 준비 완료.")
 

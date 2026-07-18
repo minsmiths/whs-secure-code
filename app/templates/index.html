@@ -1,25 +1,48 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'home' %}
 
-{% block content %}
-<section class="hero">
-  <h1>🎾 라켓부터 스트링까지, 테니스 중고거래</h1>
-  <p>Deuce Market에서 안전하게 테니스 용품을 사고팔아 보세요.</p>
-  <form class="search-bar" action="{{ url_for('products.index') }}" method="get">
-    <input type="text" name="q" placeholder="라켓, 스트링, 테니스화 검색..." maxlength="100">
-    <button type="submit">검색</button>
+{% block topbar %}
+<header class="topbar">
+  <div class="topbar-greeting">
+    안녕하세요{% if g.user %} {{ g.user['username'] }}님{% endif %} <span class="wave">👋</span>
+  </div>
+  <div class="topbar-sub">오늘의 테니스 거래를 확인해보세요</div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content">
+
+  <form class="search" action="{{ url_for('products.index') }}" method="get">
+    {{ icon('search') }}
+    <input type="text" name="q" placeholder="라켓, 브랜드, 용품 검색" maxlength="100">
   </form>
-</section>
 
-<section>
-  <h2>최근 등록된 상품</h2>
+  <div class="chips">
+    {% for c in categories %}
+      <a class="chip" href="{{ url_for('products.index', category=c) }}">{{ c }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="section-head">
+    <span class="section-title">방금 올라온 상품</span>
+    <a class="section-more" href="{{ url_for('products.index') }}">전체보기</a>
+  </div>
+
   {% if products %}
-    <div class="product-grid">
+    <div class="feed">
       {% for p in products %}
+        {% set feed = True %}
         {% include "products/_card.html" %}
       {% endfor %}
     </div>
   {% else %}
-    <p class="empty">아직 등록된 상품이 없습니다. 첫 상품을 등록해 보세요!</p>
+    <div class="empty">
+      <div class="emoji">🎾</div>
+      아직 등록된 상품이 없어요.<br>첫 상품을 등록해보세요!
+    </div>
   {% endif %}
-</section>
+
+</main>
 {% endblock %}

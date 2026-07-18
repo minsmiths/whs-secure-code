@@ -1,13 +1,33 @@
-<a class="product-card" href="{{ url_for('products.detail', product_id=p['id']) }}">
-  {% if p['image_path'] %}
-    <img class="product-thumb" src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['title'] }}">
-  {% else %}
-    <div class="product-thumb placeholder">🎾</div>
-  {% endif %}
-  <div class="product-card-body">
-    <span class="product-category">{{ p['category'] }}</span>
-    <h3 class="product-title">{{ p['title'] }}</h3>
-    <p class="product-price">{{ "{:,}".format(p['price']) }}원</p>
-    <p class="product-seller">판매자: {{ p['seller_name'] }}</p>
+{% from "_icons.html" import icon %}
+{# 필요한 변수: p(상품 row), favorite_ids(set), feed(bool) #}
+<a class="card {% if feed %}feed-card{% endif %}" href="{{ url_for('products.detail', product_id=p['id']) }}">
+  <div class="card-media">
+    {% if p['image_path'] %}
+      <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['title'] }}" loading="lazy">
+    {% else %}
+      <div class="placeholder {{ p['category']|ph_class }}">
+        <span class="ph-emoji">{{ p['category']|ph_emoji }}</span>
+        {% if p['brand'] %}<span class="ph-brand">{{ p['brand'] }}</span>{% endif %}
+      </div>
+    {% endif %}
+    {% if g.user %}
+      <button type="button" class="card-like {% if p['id'] in favorite_ids %}on{% endif %}"
+              data-fav-toggle="{{ p['id'] }}" aria-label="찜">
+        {{ icon('heart-fill') }}
+      </button>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    {% if p['brand'] %}<div class="card-brand">{{ p['brand'] }}</div>{% endif %}
+    <div class="card-title">{{ p['title'] }}</div>
+    <div class="card-price">{{ p['price']|krw }}원</div>
+    <div class="card-meta">
+      {% if p['seller_rating'] is defined and p['seller_rating'] %}
+        <span class="rating">{{ icon('star') }}{{ '%.1f'|format(p['seller_rating']) }}</span>
+        <span class="dot"></span>
+      {% endif %}
+      {% if p['location'] %}<span>{{ p['location'] }}</span><span class="dot"></span>{% endif %}
+      <span>{{ p['created_at']|timeago }}</span>
+    </div>
   </div>
 </a>

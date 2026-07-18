@@ -1,27 +1,41 @@
 {% extends "base.html" %}
-{% block title %}상품 둘러보기 · Deuce Market{% endblock %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'search' %}
 
-{% block content %}
-<h1>상품 둘러보기</h1>
+{% block topbar %}
+<header class="topbar bordered">
+  <form class="search" action="{{ url_for('products.index') }}" method="get">
+    {{ icon('search') }}
+    <input type="text" name="q" value="{{ query }}" placeholder="라켓, 브랜드, 용품 검색" maxlength="100" autofocus>
+    {% if selected_category %}<input type="hidden" name="category" value="{{ selected_category }}">{% endif %}
+  </form>
+</header>
+{% endblock %}
 
-<form class="filter-bar" action="{{ url_for('products.index') }}" method="get">
-  <input type="text" name="q" value="{{ query }}" placeholder="검색어" maxlength="100">
-  <select name="category">
-    <option value="">전체 카테고리</option>
+{% block body %}
+<main class="content">
+
+  <div class="chips">
+    <a class="chip {% if not selected_category %}active{% endif %}"
+       href="{{ url_for('products.index', q=query) }}">전체</a>
     {% for c in categories %}
-      <option value="{{ c }}" {% if c == selected_category %}selected{% endif %}>{{ c }}</option>
-    {% endfor %}
-  </select>
-  <button type="submit">검색</button>
-</form>
-
-{% if products %}
-  <div class="product-grid">
-    {% for p in products %}
-      {% include "products/_card.html" %}
+      <a class="chip {% if c == selected_category %}active{% endif %}"
+         href="{{ url_for('products.index', q=query, category=c) }}">{{ c }}</a>
     {% endfor %}
   </div>
-{% else %}
-  <p class="empty">조건에 맞는 상품이 없습니다.</p>
-{% endif %}
+
+  {% if products %}
+    <div class="grid2">
+      {% for p in products %}
+        {% include "products/_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="emoji">🔍</div>
+      조건에 맞는 상품이 없어요.
+    </div>
+  {% endif %}
+
+</main>
 {% endblock %}

@@ -1,34 +1,47 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}내 상품 · Deuce Market{% endblock %}
 
-{% block content %}
-<h1>내 상품 관리</h1>
-<p><a class="btn" href="{{ url_for('products.new') }}">+ 새 상품 등록</a></p>
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('auth.profile') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">내 상품</div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
 
-{% if products %}
-  <table class="table">
-    <thead>
-      <tr><th>상품명</th><th>카테고리</th><th>가격</th><th>상태</th><th></th></tr>
-    </thead>
-    <tbody>
-      {% for p in products %}
-        <tr>
-          <td><a href="{{ url_for('products.detail', product_id=p['id']) }}">{{ p['title'] }}</a></td>
-          <td>{{ p['category'] }}</td>
-          <td>{{ "{:,}".format(p['price']) }}원</td>
-          <td>{{ p['status'] }}</td>
-          <td>
-            <form method="post" action="{{ url_for('products.delete', product_id=p['id']) }}"
-                  onsubmit="return confirm('정말 삭제하시겠습니까?');">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button class="btn-danger" type="submit">삭제</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-{% else %}
-  <p class="empty">등록한 상품이 없습니다.</p>
-{% endif %}
+{% block body %}
+<main class="content">
+  {% if products %}
+    {% for p in products %}
+      <div class="mine-item">
+        <a class="mine-thumb" href="{{ url_for('products.detail', product_id=p['id']) }}">
+          {% if p['image_path'] %}
+            <img src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['title'] }}">
+          {% else %}
+            <div class="placeholder {{ p['category']|ph_class }}"><span class="ph-emoji">{{ p['category']|ph_emoji }}</span></div>
+          {% endif %}
+        </a>
+        <div class="mine-info">
+          <div class="t">{{ p['title'] }}</div>
+          <div class="p">{{ p['price']|krw }}원</div>
+          <span class="badge {{ p['status'] }}">
+            {%- if p['status'] == 'active' -%}판매중{%- elif p['status'] == 'blocked' -%}차단됨{%- else -%}판매완료{%- endif -%}
+          </span>
+        </div>
+        <form method="post" action="{{ url_for('products.delete', product_id=p['id']) }}"
+              data-confirm="정말 삭제하시겠습니까?">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-danger-o btn-sm" type="submit">삭제</button>
+        </form>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="emoji">📦</div>
+      등록한 상품이 없어요.
+      <div style="margin-top:16px"><a class="btn btn-primary btn-sm" href="{{ url_for('products.new') }}">상품 등록하기</a></div>
+    </div>
+  {% endif %}
+</main>
 {% endblock %}

@@ -1,36 +1,81 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}상품 등록 · Deuce Market{% endblock %}
 
-{% block content %}
-<h1>상품 등록</h1>
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('main.index') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">상품 등록</div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
 
-<form class="form" method="post" enctype="multipart/form-data">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% block body %}
+<main class="content">
+  <form class="form" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-  <label>상품명
-    <input type="text" name="title" maxlength="100" required>
-  </label>
+    <div class="field">
+      <label>상품 사진</label>
+      <input type="file" name="image" accept="image/*">
+      <div class="hint">png · jpg · jpeg · gif · webp / 최대 5MB</div>
+    </div>
 
-  <label>카테고리
-    <select name="category">
-      {% for c in categories %}
-        <option value="{{ c }}">{{ c }}</option>
-      {% endfor %}
-    </select>
-  </label>
+    <div class="field">
+      <label>상품명</label>
+      <input type="text" name="title" maxlength="100" placeholder="예) Yonex EZONE 100 (2022)" required>
+    </div>
 
-  <label>가격 (원)
-    <input type="number" name="price" min="0" step="1" required>
-  </label>
+    <div class="field-row">
+      <div class="field">
+        <label>카테고리</label>
+        <select name="category">
+          {% for c in categories %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>브랜드</label>
+        <input type="text" name="brand" maxlength="40" placeholder="예) Yonex">
+      </div>
+    </div>
 
-  <label>상품 설명
-    <textarea name="description" rows="6" maxlength="2000"></textarea>
-  </label>
+    <div class="field">
+      <label>가격 (원)</label>
+      <input type="number" name="price" min="0" step="1" placeholder="0" required>
+    </div>
 
-  <label>상품 사진
-    <input type="file" name="image" accept="image/*">
-  </label>
+    <div class="field">
+      <label>상태</label>
+      <div class="grade-picker">
+        {% for c in conditions %}
+          <label><input type="radio" name="condition_grade" value="{{ c }}"
+                 {% if loop.first %}checked{% endif %}><span>{{ c }}</span></label>
+        {% endfor %}
+      </div>
+    </div>
 
-  <button class="btn" type="submit">등록하기</button>
-</form>
+    <div class="field-row">
+      <div class="field">
+        <label>사용기간</label>
+        <input type="text" name="usage_period" maxlength="40" placeholder="예) 6개월">
+      </div>
+      <div class="field">
+        <label>그립</label>
+        <input type="text" name="grip" maxlength="20" placeholder="예) G2">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>거래 지역</label>
+      <input type="text" name="location" maxlength="60" placeholder="예) 서울 송파구">
+    </div>
+
+    <div class="field">
+      <label>상품 설명</label>
+      <textarea name="description" rows="5" maxlength="2000" placeholder="상품 상태, 구매 시기, 하자 여부 등을 적어주세요."></textarea>
+    </div>
+
+    <button class="btn btn-primary" type="submit">등록 완료</button>
+  </form>
+</main>
 {% endblock %}

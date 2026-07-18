@@ -1,0 +1,19 @@
+{% from "_icons.html" import icon %}
+<nav class="tabbar">
+  <a class="tab {% if active_tab == 'home' %}active{% endif %}" href="{{ url_for('main.index') }}">
+    {{ icon('home') }}<span>홈</span>
+  </a>
+  <a class="tab {% if active_tab == 'search' %}active{% endif %}" href="{{ url_for('products.index') }}">
+    {{ icon('search') }}<span>검색</span>
+  </a>
+  <a class="tab-center" href="{{ url_for('products.new') }}" aria-label="상품 등록">
+    {{ icon('plus') }}
+  </a>
+  <a class="tab {% if active_tab == 'fav' %}active{% endif %}" href="{{ url_for('favorites.index') }}">
+    {{ icon('heart') }}<span>찜</span>
+  </a>
+  <a class="tab {% if active_tab == 'my' %}active{% endif %}"
+     href="{{ url_for('auth.profile') if g.user else url_for('auth.login') }}">
+    {{ icon('user') }}<span>마이</span>
+  </a>
+</nav>

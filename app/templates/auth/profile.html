@@ -1,39 +1,65 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'my' %}
 {% block title %}마이페이지 · Deuce Market{% endblock %}
 
-{% block content %}
-<h1>마이페이지</h1>
+{% block topbar %}
+<header class="topbar bordered">
+  <div class="topbar-greeting" style="font-size:20px">마이페이지</div>
+</header>
+{% endblock %}
 
-<section class="profile-summary">
-  <p><strong>아이디:</strong> {{ user['username'] }}</p>
-  <p><strong>보유 잔액:</strong> {{ "{:,}".format(user['balance']) }}원</p>
-  <p><strong>가입일:</strong> {{ user['created_at'] }}</p>
-</section>
+{% block body %}
+<main class="content">
 
-<section class="card">
-  <h2>소개글 수정</h2>
+  <div class="profile-head">
+    <div class="avatar">🙂</div>
+    <div>
+      <div class="profile-name">{{ user['username'] }}</div>
+      <div class="profile-region">
+        <span class="rating">{{ icon('star') }}{{ '%.1f'|format(user['rating']) }}</span>
+        {% if user['region'] %} · {{ user['region'] }}{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="wallet">
+    <div class="label">내 잔액</div>
+    <div class="amount">{{ user['balance']|krw }}<span class="won">원</span></div>
+  </div>
+
+  <div class="menu-list">
+    <a class="menu-item" href="{{ url_for('products.mine') }}">📦 내 상품 관리 <span class="chev">{{ icon('chev') }}</span></a>
+    <a class="menu-item" href="{{ url_for('favorites.index') }}">❤️ 찜한 상품 <span class="chev">{{ icon('chev') }}</span></a>
+    <a class="menu-item" href="{{ url_for('chat.room') }}">💬 채팅 <span class="chev">{{ icon('chev') }}</span></a>
+  </div>
+
+  <div class="section-head"><span class="section-title">소개글</span></div>
   <form class="form" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="update_bio">
-    <label>소개글
-      <textarea name="bio" rows="4" maxlength="500">{{ user['bio'] }}</textarea>
-    </label>
-    <button class="btn" type="submit">저장</button>
+    <div class="field">
+      <textarea name="bio" rows="3" maxlength="500" placeholder="자기소개를 입력하세요">{{ user['bio'] }}</textarea>
+    </div>
+    <button class="btn btn-outline" type="submit">소개글 저장</button>
   </form>
-</section>
 
-<section class="card">
-  <h2>비밀번호 변경</h2>
+  <div class="section-head"><span class="section-title">비밀번호 변경</span></div>
   <form class="form" method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="change_password">
-    <label>현재 비밀번호
-      <input type="password" name="current_password" required>
-    </label>
-    <label>새 비밀번호
-      <input type="password" name="new_password" minlength="8" required>
-    </label>
-    <button class="btn" type="submit">비밀번호 변경</button>
+    <div class="field">
+      <input type="password" name="current_password" placeholder="현재 비밀번호" required>
+    </div>
+    <div class="field">
+      <input type="password" name="new_password" minlength="8" placeholder="새 비밀번호 (8자 이상)" required>
+    </div>
+    <button class="btn btn-outline" type="submit">비밀번호 변경</button>
   </form>
-</section>
+
+  <div style="margin-top:24px">
+    <a class="btn btn-danger-o" href="{{ url_for('auth.logout') }}">로그아웃</a>
+  </div>
+
+</main>
 {% endblock %}

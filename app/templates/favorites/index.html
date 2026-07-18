@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'fav' %}
+{% block title %}찜한 상품 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar bordered">
+  <div class="topbar-greeting" style="font-size:20px">찜한 상품 ❤️</div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content">
+  {% if products %}
+    <div class="grid2">
+      {% for p in products %}
+        {% include "products/_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">
+      <div class="emoji">🤍</div>
+      아직 찜한 상품이 없어요.<br>마음에 드는 상품에 하트를 눌러보세요!
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

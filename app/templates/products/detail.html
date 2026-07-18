@@ -1,37 +1,96 @@
 {% extends "base.html" %}
+{% from "_icons.html" import icon %}
 {% block title %}{{ product['title'] }} · Deuce Market{% endblock %}
 
-{% block content %}
-<div class="product-detail">
-  <div class="product-detail-image">
-    {% if product['image_path'] %}
-      <img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['title'] }}">
-    {% else %}
-      <div class="product-thumb placeholder large">🎾</div>
-    {% endif %}
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('products.index') }}">{{ icon('back') }}</a>
+  <div class="topbar-title"></div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content" style="padding-bottom:110px">
+
+  <div class="detail-carousel" data-carousel>
+    <div class="carousel-track">
+      {% if product['image_path'] %}
+        <div class="carousel-slide"><img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['title'] }}"></div>
+      {% else %}
+        <div class="carousel-slide">
+          <div class="placeholder {{ product['category']|ph_class }}">
+            <span class="ph-emoji">{{ product['category']|ph_emoji }}</span>
+            {% if product['brand'] %}<span class="ph-brand">{{ product['brand'] }}</span>{% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
   </div>
 
-  <div class="product-detail-info">
-    <span class="product-category">{{ product['category'] }}</span>
-    <h1>{{ product['title'] }}</h1>
-    <p class="product-price large">{{ "{:,}".format(product['price']) }}원</p>
-    <p class="product-seller">
-      판매자:
-      <a href="{{ url_for('auth.user_detail', user_id=product['seller_id']) }}">
-        {{ product['seller_name'] }}
-      </a>
-    </p>
+  <div class="detail-body">
+    {% if product['brand'] %}<div class="detail-brand">{{ product['brand'] }}</div>{% endif %}
+    <h1 class="detail-title">{{ product['title'] }}</h1>
 
-    {# description 은 Jinja2 자동 이스케이프로 XSS 방지됨 #}
-    <div class="product-description">{{ product['description'] }}</div>
+    <div class="detail-rating">
+      <span class="stars">
+        {% set r = (product['seller_rating'] or 0)|round(0, 'floor')|int %}
+        {% for i in range(5) %}{% if i < r %}{{ icon('star') }}{% endif %}{% endfor %}
+      </span>
+      <span>판매자 {{ '%.1f'|format(product['seller_rating'] or 0) }}</span>
+    </div>
 
-    {% if g.user and g.user['id'] != product['seller_id'] %}
-      <div class="detail-actions">
-        <a class="btn" href="{{ url_for('auth.user_detail', user_id=product['seller_id']) }}">판매자에게 문의</a>
+    <div class="detail-price">{{ product['price']|krw }}원</div>
+
+    <div class="spec">
+      <div class="spec-item"><div class="k">상태</div><div class="v">{{ product['condition_grade'] or '-' }}</div></div>
+      <div class="spec-item"><div class="k">사용기간</div><div class="v">{{ product['usage_period'] or '-' }}</div></div>
+      <div class="spec-item"><div class="k">브랜드</div><div class="v">{{ product['brand'] or '-' }}</div></div>
+      <div class="spec-item"><div class="k">그립</div><div class="v">{{ product['grip'] or '-' }}</div></div>
+    </div>
+
+    {% if product['description'] %}
+      <div class="detail-desc">{{ product['description'] }}</div>
+    {% endif %}
+
+    <div class="divider"></div>
+
+    <a class="seller" href="{{ url_for('auth.user_detail', user_id=product['seller_id']) }}">
+      <div class="avatar">🙂</div>
+      <div class="seller-info">
+        <div class="seller-name">{{ product['seller_name'] }}</div>
+        <div class="seller-meta">
+          <span class="rating">{{ icon('star') }}{{ '%.1f'|format(product['seller_rating'] or 0) }}</span>
+          {% if product['seller_region'] %}· {{ product['seller_region'] }}{% endif %}
+        </div>
       </div>
-    {% endif %}
-  </div>
-</div>
+      {{ icon('chev') }}
+    </a>
 
-<p><a href="{{ url_for('products.index') }}">← 목록으로</a></p>
+    <div class="card-meta" style="margin-top:8px">
+      {% if product['location'] %}<span>{{ product['location'] }}</span><span class="dot"></span>{% endif %}
+      <span>{{ product['created_at']|timeago }}</span>
+      <span class="dot"></span><span>찜 <b data-fav-count>{{ fav_count }}</b></span>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block bottom %}
+<div class="action-bar">
+  {% if g.user %}
+    <button type="button" class="action-like {% if is_favorited %}on{% endif %}"
+            data-fav-toggle="{{ product['id'] }}" aria-label="찜">
+      {{ icon('heart-fill') }}
+    </button>
+  {% endif %}
+  {% if g.user and g.user['id'] != product['seller_id'] %}
+    <a class="btn btn-outline" href="{{ url_for('chat.room') }}">채팅하기</a>
+    <a class="btn btn-primary" href="{{ url_for('chat.room') }}">구매하기</a>
+  {% elif g.user and g.user['id'] == product['seller_id'] %}
+    <a class="btn btn-outline" href="{{ url_for('products.mine') }}">내 상품 관리</a>
+  {% else %}
+    <a class="btn btn-primary" href="{{ url_for('auth.login') }}">로그인하고 거래하기</a>
+  {% endif %}
+</div>
 {% endblock %}

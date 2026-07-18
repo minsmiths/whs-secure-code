@@ -1,11 +1,11 @@
 -- ============================================================
 --  Deuce Market 🎾  데이터베이스 스키마
---  테니스 용품 중고거래 플랫폼
+--  테니스 용품 중고거래 플랫폼 (프리미엄 리디자인)
 -- ============================================================
 
 PRAGMA foreign_keys = ON;
 
--- 기존 테이블 제거 (초기화용)
+DROP TABLE IF EXISTS favorite;
 DROP TABLE IF EXISTS transfer;
 DROP TABLE IF EXISTS report;
 DROP TABLE IF EXISTS message;
@@ -14,16 +14,14 @@ DROP TABLE IF EXISTS user;
 
 -- ----------------------------------------------------------------
 -- 사용자
---   password_hash: 평문이 아닌 해시로만 저장 (Werkzeug PBKDF2)
---   balance: 유저 간 송금용 잔액
---   is_active: 신고 누적 시 0(휴면)으로 전환
---   is_admin: 관리자 여부
 -- ----------------------------------------------------------------
 CREATE TABLE user (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT    NOT NULL UNIQUE,
     password_hash TEXT    NOT NULL,
     bio           TEXT    NOT NULL DEFAULT '',
+    region        TEXT    NOT NULL DEFAULT '',
+    rating        REAL    NOT NULL DEFAULT 5.0,
     balance       INTEGER NOT NULL DEFAULT 0,
     is_active     INTEGER NOT NULL DEFAULT 1,
     is_admin      INTEGER NOT NULL DEFAULT 0,
@@ -32,25 +30,41 @@ CREATE TABLE user (
 
 -- ----------------------------------------------------------------
 -- 상품 (테니스 용품)
---   category: 라켓 / 스트링 / 신발 / 의류 / 가방 / 공 / 액세서리
 --   status: active(판매중) / sold(판매완료) / blocked(신고차단)
 -- ----------------------------------------------------------------
 CREATE TABLE product (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    title       TEXT    NOT NULL,
-    description TEXT    NOT NULL DEFAULT '',
-    price       INTEGER NOT NULL CHECK (price >= 0),
-    category    TEXT    NOT NULL DEFAULT '기타',
-    image_path  TEXT,
-    status      TEXT    NOT NULL DEFAULT 'active',
-    seller_id   INTEGER NOT NULL,
-    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    title           TEXT    NOT NULL,
+    description     TEXT    NOT NULL DEFAULT '',
+    price           INTEGER NOT NULL CHECK (price >= 0),
+    category        TEXT    NOT NULL DEFAULT '기타',
+    brand           TEXT    NOT NULL DEFAULT '',
+    condition_grade TEXT    NOT NULL DEFAULT '',
+    usage_period    TEXT    NOT NULL DEFAULT '',
+    grip            TEXT    NOT NULL DEFAULT '',
+    location        TEXT    NOT NULL DEFAULT '',
+    image_path      TEXT,
+    status          TEXT    NOT NULL DEFAULT 'active',
+    seller_id       INTEGER NOT NULL,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (seller_id) REFERENCES user (id) ON DELETE CASCADE
 );
 
 -- ----------------------------------------------------------------
--- 채팅 메시지 (전체 채팅 + 1:1 채팅)
---   recipient_id 가 NULL 이면 전체 채팅, 값이 있으면 1:1 채팅
+-- 찜 (좋아요)
+-- ----------------------------------------------------------------
+CREATE TABLE favorite (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id)    REFERENCES user (id)    ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES product (id) ON DELETE CASCADE,
+    UNIQUE (user_id, product_id)
+);
+
+-- ----------------------------------------------------------------
+-- 채팅 메시지 (recipient_id NULL = 전체 채팅)
 -- ----------------------------------------------------------------
 CREATE TABLE message (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,9 +77,7 @@ CREATE TABLE message (
 );
 
 -- ----------------------------------------------------------------
--- 신고 (유저 또는 상품 대상)
---   target_type: 'user' 또는 'product'
---   같은 사람이 같은 대상을 중복 신고하지 못하도록 UNIQUE 제약
+-- 신고
 -- ----------------------------------------------------------------
 CREATE TABLE report (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,7 +91,7 @@ CREATE TABLE report (
 );
 
 -- ----------------------------------------------------------------
--- 송금 내역 (유저 간 잔액 이체)
+-- 송금 내역
 -- ----------------------------------------------------------------
 CREATE TABLE transfer (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,8 +103,8 @@ CREATE TABLE transfer (
     FOREIGN KEY (receiver_id) REFERENCES user (id) ON DELETE CASCADE
 );
 
--- 조회 성능을 위한 인덱스
-CREATE INDEX idx_product_seller  ON product (seller_id);
-CREATE INDEX idx_product_status  ON product (status);
+CREATE INDEX idx_product_seller   ON product (seller_id);
+CREATE INDEX idx_product_status   ON product (status);
+CREATE INDEX idx_favorite_user    ON favorite (user_id);
 CREATE INDEX idx_message_recipient ON message (recipient_id);
-CREATE INDEX idx_report_target    ON report (target_type, target_id);
+CREATE INDEX idx_report_target     ON report (target_type, target_id);

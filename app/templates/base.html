@@ -2,48 +2,33 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="theme-color" content="#F7F8FA">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎾</text></svg>">
   <title>{% block title %}Deuce Market 🎾{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="{{ url_for('main.index') }}">🎾 Deuce Market</a>
-      <nav class="nav">
-        <a href="{{ url_for('products.index') }}">상품 둘러보기</a>
-        {% if g.user %}
-          <a href="{{ url_for('products.new') }}">상품 등록</a>
-          <a href="{{ url_for('products.mine') }}">내 상품</a>
-          <a href="{{ url_for('auth.profile') }}">마이페이지</a>
-          <span class="nav-user">{{ g.user['username'] }}님</span>
-          <a class="btn-link" href="{{ url_for('auth.logout') }}">로그아웃</a>
-        {% else %}
-          <a href="{{ url_for('auth.login') }}">로그인</a>
-          <a class="btn-link" href="{{ url_for('auth.register') }}">회원가입</a>
-        {% endif %}
-      </nav>
-    </div>
-  </header>
+  <div class="app">
 
-  <main class="container">
     {% with messages = get_flashed_messages() %}
       {% if messages %}
         <div class="flashes">
-          {% for message in messages %}
-            <div class="flash">{{ message }}</div>
-          {% endfor %}
+          {% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
-  </main>
+    {% block topbar %}{% endblock %}
 
-  <footer class="site-footer">
-    <div class="container">
-      <p>Deuce Market — 테니스 용품 중고거래 · WHS Secure Coding 실습</p>
-    </div>
-  </footer>
+    {% block body %}{% endblock %}
+
+    {% block bottom %}
+      {% include "_tabbar.html" %}
+    {% endblock %}
+
+  </div>
 </body>
 </html>

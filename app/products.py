@@ -13,10 +13,10 @@ from .security import login_required
 bp = Blueprint("products", __name__, url_prefix="/products")
 
 CATEGORIES = ["라켓", "스트링", "테니스화", "의류", "가방", "테니스공", "액세서리", "기타"]
+CONDITIONS = ["S", "A+", "A", "B+", "B", "C"]
 
 
 def _allowed_image(filename: str) -> bool:
-    """확장자 화이트리스트 검사."""
     if "." not in filename:
         return False
     ext = filename.rsplit(".", 1)[1].lower()
@@ -24,10 +24,10 @@ def _allowed_image(filename: str) -> bool:
 
 
 def _save_image(file_storage) -> str | None:
-    """업로드 이미지를 안전하게 저장하고 상대 경로를 반환한다.
+    """업로드 이미지를 안전하게 저장하고 상대 경로를 반환.
 
     - 확장자 화이트리스트 검사
-    - 파일명을 무작위로 재생성 (원본 파일명 신뢰하지 않음 → 경로 조작 방지)
+    - 파일명 무작위 재생성 (원본 파일명 신뢰 금지 → 경로 조작 방지)
     """
     if not file_storage or file_storage.filename == "":
         return None
@@ -38,29 +38,37 @@ def _save_image(file_storage) -> str | None:
     random_name = f"{secrets.token_hex(16)}.{ext}"
     save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], random_name)
     file_storage.save(save_path)
-    # 템플릿에서 url_for('static', ...) 로 접근할 상대 경로
     return f"uploads/{random_name}"
+
+
+def _favorite_ids() -> set:
+    """현재 로그인 유저가 찜한 상품 id 집합 (비로그인 시 빈 집합)."""
+    if g.user is None:
+        return set()
+    rows = get_db().execute(
+        "SELECT product_id FROM favorite WHERE user_id = ?", (g.user["id"],)
+    ).fetchall()
+    return {r["product_id"] for r in rows}
 
 
 @bp.route("/")
 def index():
-    """전체 상품 목록 + 검색."""
+    """전체 상품 목록 + 검색 + 카테고리 필터."""
     query = request.args.get("q", "").strip()
     category = request.args.get("category", "").strip()
     db = get_db()
 
     sql = (
-        "SELECT p.*, u.username AS seller_name "
+        "SELECT p.*, u.username AS seller_name, u.rating AS seller_rating "
         "FROM product p JOIN user u ON p.seller_id = u.id "
         "WHERE p.status = 'active'"
     )
     params: list = []
 
     if query:
-        # LIKE 검색도 파라미터 바인딩으로 처리 (SQL Injection 방지)
-        sql += " AND (p.title LIKE ? OR p.description LIKE ?)"
+        sql += " AND (p.title LIKE ? OR p.description LIKE ? OR p.brand LIKE ?)"
         like = f"%{query}%"
-        params.extend([like, like])
+        params.extend([like, like, like])
 
     if category and category in CATEGORIES:
         sql += " AND p.category = ?"
@@ -75,6 +83,7 @@ def index():
         categories=CATEGORIES,
         query=query,
         selected_category=category,
+        favorite_ids=_favorite_ids(),
     )
 
 
@@ -82,7 +91,8 @@ def index():
 def detail(product_id: int):
     db = get_db()
     product = db.execute(
-        "SELECT p.*, u.username AS seller_name "
+        "SELECT p.*, u.username AS seller_name, u.rating AS seller_rating, "
+        "u.region AS seller_region "
         "FROM product p JOIN user u ON p.seller_id = u.id "
         "WHERE p.id = ?",
         (product_id,),
@@ -92,7 +102,16 @@ def detail(product_id: int):
         flash("존재하지 않거나 차단된 상품입니다.")
         return redirect(url_for("products.index"))
 
-    return render_template("products/detail.html", product=product)
+    fav_count = db.execute(
+        "SELECT COUNT(*) AS c FROM favorite WHERE product_id = ?", (product_id,)
+    ).fetchone()["c"]
+
+    return render_template(
+        "products/detail.html",
+        product=product,
+        is_favorited=product_id in _favorite_ids(),
+        fav_count=fav_count,
+    )
 
 
 @bp.route("/new", methods=("GET", "POST"))
@@ -103,6 +122,11 @@ def new():
         description = request.form.get("description", "").strip()
         price_raw = request.form.get("price", "").strip()
         category = request.form.get("category", "기타").strip()
+        brand = request.form.get("brand", "").strip()[:40]
+        condition_grade = request.form.get("condition_grade", "").strip()
+        usage_period = request.form.get("usage_period", "").strip()[:40]
+        grip = request.form.get("grip", "").strip()[:20]
+        location = request.form.get("location", "").strip()[:60]
 
         error = None
         price = None
@@ -113,8 +137,9 @@ def new():
             error = "상품명은 100자 이하여야 합니다."
         elif category not in CATEGORIES:
             error = "올바른 카테고리를 선택하세요."
+        elif condition_grade and condition_grade not in CONDITIONS:
+            error = "올바른 상태 등급을 선택하세요."
         else:
-            # 가격: 정수, 음수 불가, 상한 검증
             try:
                 price = int(price_raw)
             except (TypeError, ValueError):
@@ -135,9 +160,11 @@ def new():
         if error is None:
             db = get_db()
             db.execute(
-                "INSERT INTO product (title, description, price, category, "
-                "image_path, seller_id) VALUES (?, ?, ?, ?, ?, ?)",
-                (title, description, price, category, image_path, g.user["id"]),
+                "INSERT INTO product (title, description, price, category, brand, "
+                "condition_grade, usage_period, grip, location, image_path, seller_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (title, description, price, category, brand, condition_grade,
+                 usage_period, grip, location, image_path, g.user["id"]),
             )
             db.commit()
             flash("상품을 등록했습니다.")
@@ -145,13 +172,14 @@ def new():
 
         flash(error)
 
-    return render_template("products/new.html", categories=CATEGORIES)
+    return render_template(
+        "products/new.html", categories=CATEGORIES, conditions=CONDITIONS
+    )
 
 
 @bp.route("/mine")
 @login_required
 def mine():
-    """내가 등록한 상품 관리."""
     db = get_db()
     products = db.execute(
         "SELECT * FROM product WHERE seller_id = ? ORDER BY created_at DESC",
@@ -172,7 +200,7 @@ def delete(product_id: int):
         flash("존재하지 않는 상품입니다.")
         return redirect(url_for("products.mine"))
 
-    # 소유자 검증 (IDOR 방지): 관리자가 아니면 본인 상품만 삭제 가능
+    # 소유자 검증(IDOR 방지): 관리자가 아니면 본인 상품만 삭제 가능
     if product["seller_id"] != g.user["id"] and not g.user["is_admin"]:
         flash("삭제 권한이 없습니다.")
         return redirect(url_for("products.mine"))

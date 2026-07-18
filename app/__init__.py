@@ -29,6 +29,10 @@ def create_app(config_class: type = Config) -> Flask:
     db.init_app(app)
     seed.init_app(app)
 
+    # === Jinja 필터 (timeago, krw, placeholder) ===
+    from . import filters
+    filters.init_app(app)
+
     # === 요청마다 로그인 사용자 로드 ===
     from .security import load_logged_in_user
 
@@ -55,10 +59,12 @@ def create_app(config_class: type = Config) -> Flask:
         return response
 
     # === 블루프린트 등록 ===
-    from . import auth, products, main
+    from . import auth, products, main, chat, favorites
 
     app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(products.bp)
+    app.register_blueprint(chat.bp)
+    app.register_blueprint(favorites.bp)
 
     return app
