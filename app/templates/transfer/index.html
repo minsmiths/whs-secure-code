@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'my' %}
+{% block title %}송금 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('auth.profile') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">송금</div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content">
+
+  <div class="wallet">
+    <div class="label">보낼 수 있는 잔액</div>
+    <div class="amount">{{ balance|krw }}<span class="won">원</span></div>
+  </div>
+
+  <form class="form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label>받는 사람 (아이디)</label>
+      <input type="text" name="to_username" value="{{ prefill }}" placeholder="상대방 아이디" required>
+    </div>
+    <div class="field">
+      <label>금액 (원)</label>
+      <input type="number" name="amount" min="1" step="1" placeholder="0" required>
+    </div>
+    <button class="btn btn-primary" type="submit">송금하기</button>
+  </form>
+
+  <div class="section-head"><span class="section-title">거래 내역</span></div>
+  {% if history %}
+    <div class="menu-list">
+      {% for t in history %}
+        {% set incoming = (t['receiver_id'] == g.user['id']) %}
+        <div class="menu-item" style="justify-content:space-between">
+          <span>
+            {% if incoming %}💰 <b>{{ t['sender_name'] }}</b> 님에게 받음
+            {% else %}📤 <b>{{ t['receiver_name'] }}</b> 님에게 보냄{% endif %}
+            <div style="font-size:12px;color:var(--sub)">{{ t['created_at']|timeago }}</div>
+          </span>
+          <span style="font-weight:800;color:{{ '#2e9e4f' if incoming else 'var(--text)' }}">
+            {{ '+' if incoming else '-' }}{{ t['amount']|krw }}원
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty"><div class="emoji">🧾</div>아직 거래 내역이 없어요.</div>
+  {% endif %}
+
+</main>
+{% endblock %}

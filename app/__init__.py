@@ -59,12 +59,15 @@ def create_app(config_class: type = Config) -> Flask:
         return response
 
     # === 블루프린트 등록 ===
-    from . import auth, products, main, chat, favorites
+    from . import auth, products, main, chat, favorites, transfer, report, admin
 
     app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(products.bp)
     app.register_blueprint(chat.bp)
     app.register_blueprint(favorites.bp)
+    app.register_blueprint(transfer.bp)
+    app.register_blueprint(report.bp)
+    app.register_blueprint(admin.bp)
 
     return app

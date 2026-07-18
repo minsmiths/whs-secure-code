@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'my' %}
+{% block title %}관리자 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('auth.profile') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">🛡️ 관리자</div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content">
+
+  <div class="stat-grid">
+    <div class="stat"><div class="n">{{ stats['users'] }}</div><div class="l">사용자</div></div>
+    <div class="stat"><div class="n">{{ stats['products'] }}</div><div class="l">상품</div></div>
+    <div class="stat"><div class="n">{{ stats['blocked'] }}</div><div class="l">차단 상품</div></div>
+    <div class="stat"><div class="n">{{ stats['reports'] }}</div><div class="l">신고</div></div>
+  </div>
+
+  <div class="section-head"><span class="section-title">신고 내역</span></div>
+  {% if reports %}
+    <div class="admin-list">
+      {% for r in reports %}
+        <div class="admin-row">
+          <span class="tag {{ 'tag-p' if r['target_type']=='product' else 'tag-u' }}">
+            {{ '상품' if r['target_type']=='product' else '유저' }}
+          </span>
+          <div class="admin-row-body">
+            <div class="admin-row-title">{{ r['label'] }}</div>
+            <div class="admin-row-sub">{{ r['reason'] }}</div>
+            <div class="admin-row-meta">신고자 {{ r['reporter_name'] }} · {{ r['created_at']|timeago }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty" style="padding:20px">신고 내역이 없습니다.</div>
+  {% endif %}
+
+  <div class="section-head"><span class="section-title">사용자 관리</span></div>
+  <div class="admin-list">
+    {% for u in users %}
+      <div class="admin-row">
+        <div class="admin-row-body">
+          <div class="admin-row-title">
+            {{ u['username'] }}
+            {% if u['is_admin'] %}<span class="tag tag-a">관리자</span>{% endif %}
+            {% if not u['is_active'] %}<span class="tag tag-d">휴면</span>{% endif %}
+          </div>
+          <div class="admin-row-meta">신고 {{ u['report_count'] }}건 · 잔액 {{ u['balance']|krw }}원</div>
+        </div>
+        {% if not u['is_admin'] %}
+          <form method="post" action="{{ url_for('admin.toggle_user', user_id=u['id']) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn-sm {{ 'btn-outline' if u['is_active'] else 'btn-primary' }}" type="submit">
+              {{ '휴면' if u['is_active'] else '복구' }}
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="section-head"><span class="section-title">상품 관리</span></div>
+  <div class="admin-list">
+    {% for p in products %}
+      <div class="admin-row">
+        <div class="admin-row-body">
+          <div class="admin-row-title">
+            {{ p['title'] }}
+            {% if p['status']=='blocked' %}<span class="tag tag-d">차단됨</span>{% endif %}
+          </div>
+          <div class="admin-row-meta">{{ p['seller_name'] }} · {{ p['price']|krw }}원 · 신고 {{ p['report_count'] }}건</div>
+        </div>
+        <div class="admin-actions">
+          <form method="post" action="{{ url_for('admin.product_status', product_id=p['id']) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if p['status']=='blocked' %}
+              <input type="hidden" name="action" value="unblock">
+              <button class="btn-sm btn-primary" type="submit">해제</button>
+            {% else %}
+              <input type="hidden" name="action" value="block">
+              <button class="btn-sm btn-outline" type="submit">차단</button>
+            {% endif %}
+          </form>
+          <form method="post" action="{{ url_for('admin.product_status', product_id=p['id']) }}"
+                data-confirm="이 상품을 삭제하시겠습니까?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="delete">
+            <button class="btn-sm btn-danger-o" type="submit">삭제</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</main>
+{% endblock %}

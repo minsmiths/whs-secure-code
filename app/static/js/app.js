@@ -143,6 +143,13 @@
       });
     });
 
+    // 사진 첨부: 파일 선택 시 폼 자동 전송
+    document.querySelectorAll("[data-autosubmit]").forEach(function (input) {
+      input.addEventListener("change", function () {
+        if (input.files && input.files.length && input.form) input.form.submit();
+      });
+    });
+
     // 삭제
     document.querySelectorAll("[data-del]").forEach(function (btn) {
       btn.addEventListener("click", function () {

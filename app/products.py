@@ -1,44 +1,16 @@
 """상품 등록 / 조회 / 상세 / 수정 / 삭제."""
-import os
-import secrets
-
 from flask import (
-    Blueprint, current_app, flash, g, redirect, render_template, request, url_for
+    Blueprint, flash, g, redirect, render_template, request, url_for
 )
-from werkzeug.utils import secure_filename
 
 from .db import get_db
 from .security import login_required
+from .uploads import save_image
 
 bp = Blueprint("products", __name__, url_prefix="/products")
 
 CATEGORIES = ["라켓", "스트링", "테니스화", "의류", "가방", "테니스공", "액세서리", "기타"]
 CONDITIONS = ["S", "A+", "A", "B+", "B", "C"]
-
-
-def _allowed_image(filename: str) -> bool:
-    if "." not in filename:
-        return False
-    ext = filename.rsplit(".", 1)[1].lower()
-    return ext in current_app.config["ALLOWED_IMAGE_EXTENSIONS"]
-
-
-def _save_image(file_storage) -> str | None:
-    """업로드 이미지를 안전하게 저장하고 상대 경로를 반환.
-
-    - 확장자 화이트리스트 검사
-    - 파일명 무작위 재생성 (원본 파일명 신뢰 금지 → 경로 조작 방지)
-    """
-    if not file_storage or file_storage.filename == "":
-        return None
-    if not _allowed_image(file_storage.filename):
-        raise ValueError("허용되지 않은 이미지 형식입니다. (png, jpg, jpeg, gif, webp)")
-
-    ext = secure_filename(file_storage.filename).rsplit(".", 1)[1].lower()
-    random_name = f"{secrets.token_hex(16)}.{ext}"
-    save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], random_name)
-    file_storage.save(save_path)
-    return f"uploads/{random_name}"
 
 
 def _favorite_ids() -> set:
@@ -153,7 +125,7 @@ def new():
         image_path = None
         if error is None:
             try:
-                image_path = _save_image(request.files.get("image"))
+                image_path = save_image(request.files.get("image"))
             except ValueError as exc:
                 error = str(exc)
 

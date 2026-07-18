@@ -26,12 +26,17 @@
   <div class="wallet">
     <div class="label">내 잔액</div>
     <div class="amount">{{ user['balance']|krw }}<span class="won">원</span></div>
+    <a class="wallet-btn" href="{{ url_for('transfer.index') }}">💸 송금하기</a>
   </div>
 
   <div class="menu-list">
     <a class="menu-item" href="{{ url_for('products.mine') }}">📦 내 상품 관리 <span class="chev">{{ icon('chev') }}</span></a>
     <a class="menu-item" href="{{ url_for('favorites.index') }}">❤️ 찜한 상품 <span class="chev">{{ icon('chev') }}</span></a>
     <a class="menu-item" href="{{ url_for('chat.index') }}">💬 채팅 <span class="chev">{{ icon('chev') }}</span></a>
+    <a class="menu-item" href="{{ url_for('transfer.index') }}">💸 송금 / 거래내역 <span class="chev">{{ icon('chev') }}</span></a>
+    {% if user['is_admin'] %}
+      <a class="menu-item" href="{{ url_for('admin.dashboard') }}">🛡️ 관리자 페이지 <span class="chev">{{ icon('chev') }}</span></a>
+    {% endif %}
   </div>
 
   <div class="section-head"><span class="section-title">소개글</span></div>

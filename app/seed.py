@@ -122,6 +122,20 @@ def seed_command() -> None:
                 )
         db.commit()
 
+    # 샘플 신고 (관리자 페이지 시연용)
+    rcount = db.execute("SELECT COUNT(*) AS c FROM report").fetchone()["c"]
+    if rcount == 0:
+        pure_aero = db.execute(
+            "SELECT id FROM product WHERE title LIKE '%Pure Aero%' LIMIT 1"
+        ).fetchone()
+        if pure_aero:
+            db.execute(
+                "INSERT INTO report (reporter_id, target_type, target_id, reason) "
+                "VALUES (?, 'product', ?, ?)",
+                (uid("baseliner"), pure_aero["id"], "시세보다 너무 비싸고 사진이 실제와 달라요."),
+            )
+        db.commit()
+
     click.echo("시드 데이터 준비 완료.")
 
 

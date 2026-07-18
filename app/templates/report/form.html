@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}신고 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ request.referrer or url_for('main.index') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">신고하기</div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content">
+  <div class="report-target">
+    {{ icon('flag') }}
+    <div>
+      <div class="report-kind">{{ '상품 신고' if target_type == 'product' else '사용자 신고' }}</div>
+      <div class="report-name">{{ label }}</div>
+    </div>
+  </div>
+
+  <form class="form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label>신고 사유</label>
+      <textarea name="reason" rows="5" maxlength="500" required
+                placeholder="허위 매물, 사기 의심, 부적절한 내용 등 신고 사유를 자세히 적어주세요."></textarea>
+      <div class="hint">누적 신고가 일정 횟수를 넘으면 자동으로 차단/휴면 처리됩니다.</div>
+    </div>
+    <button class="btn btn-primary" type="submit">신고 접수</button>
+  </form>
+</main>
+{% endblock %}

@@ -12,6 +12,7 @@ from flask import (
 
 from .db import get_db
 from .security import login_required
+from .uploads import save_image
 
 bp = Blueprint("chat", __name__, url_prefix="/chat")
 
@@ -32,6 +33,19 @@ def _get_conversation(conv_id: int):
     if g.user["id"] not in (conv["buyer_id"], conv["seller_id"]):
         abort(403)
     return conv
+
+
+def _preview(last) -> str:
+    """채팅 목록에 보여줄 마지막 메시지 미리보기."""
+    if last is None:
+        return "대화를 시작해보세요"
+    if last["is_deleted"]:
+        return "삭제된 메시지입니다"
+    if last["body"]:
+        return last["body"]
+    if last["image_path"]:
+        return "📷 사진"
+    return ""
 
 
 def _other_side(conv):
@@ -87,8 +101,7 @@ def index():
             "product_title": c["product_title"],
             "product_image": c["product_image"],
             "product_category": c["product_category"],
-            "last_body": (last["body"] if last and not last["is_deleted"]
-                          else ("삭제된 메시지입니다" if last else "대화를 시작해보세요")),
+            "last_body": _preview(last),
             "last_at": last["created_at"] if last else c["created_at"],
             "unread": unread,
         })
@@ -144,14 +157,24 @@ def room(conv_id: int):
 
     if request.method == "POST":
         body = request.form.get("body", "").strip()
-        if not body:
+        image_path = None
+        error = None
+        try:
+            image_path = save_image(request.files.get("image"))
+        except ValueError as exc:
+            error = str(exc)
+
+        if error:
+            flash(error)
+        elif not body and not image_path:
             flash("메시지를 입력하세요.")
         elif len(body) > MAX_MESSAGE_LEN:
             flash(f"메시지는 {MAX_MESSAGE_LEN}자 이하여야 합니다.")
         else:
             db.execute(
-                "INSERT INTO message (conversation_id, sender_id, body) VALUES (?, ?, ?)",
-                (conv_id, g.user["id"], body),
+                "INSERT INTO message (conversation_id, sender_id, body, image_path) "
+                "VALUES (?, ?, ?, ?)",
+                (conv_id, g.user["id"], body, image_path),
             )
             # 상대가 방을 나갔더라도 새 메시지가 오면 다시 보이게
             other_hidden = "seller_hidden" if role == "buyer" else "buyer_hidden"

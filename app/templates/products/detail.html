@@ -72,6 +72,12 @@
       <span>{{ product['created_at']|timeago }}</span>
       <span class="dot"></span><span>찜 <b data-fav-count>{{ fav_count }}</b></span>
     </div>
+
+    {% if g.user and g.user['id'] != product['seller_id'] %}
+      <a class="report-link" href="{{ url_for('report.create', target_type='product', target_id=product['id']) }}">
+        🚩 이 상품 신고하기
+      </a>
+    {% endif %}
   </div>
 </main>
 {% endblock %}

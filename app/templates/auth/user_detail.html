@@ -25,6 +25,12 @@
     <div class="detail-desc" style="margin-top:0">{{ user['bio'] }}</div>
   {% endif %}
 
+  {% if g.user and g.user['id'] != user['id'] %}
+    <a class="report-link" href="{{ url_for('report.create', target_type='user', target_id=user['id']) }}">
+      🚩 이 사용자 신고하기
+    </a>
+  {% endif %}
+
   <div class="section-head"><span class="section-title">판매 중인 상품</span></div>
   {% if products %}
     <div class="grid2">

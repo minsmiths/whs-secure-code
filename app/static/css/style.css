@@ -369,6 +369,11 @@ svg { width: 22px; height: 22px; flex: none; }   /* 아이콘 기본 크기 (거
 .wallet .label { font-size: 13px; color: #b9b9bd; }
 .wallet .amount { font-size: 28px; font-weight: 800; margin-top: 4px; }
 .wallet .amount .won { font-size: 18px; font-weight: 700; }
+.wallet-btn {
+  display: inline-block; margin-top: 14px; background: var(--lime); color: #1a2a00;
+  font-weight: 700; font-size: 14px; padding: 9px 16px; border-radius: var(--r-pill);
+}
+.wallet-btn:active { background: var(--lime-press); }
 .menu-list { background: var(--card); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
 .menu-item {
   display: flex; align-items: center; gap: var(--s3); padding: 16px 18px;
@@ -450,10 +455,18 @@ svg { width: 22px; height: 22px; flex: none; }   /* 아이콘 기본 크기 (거
   padding: 10px var(--s4) calc(10px + env(safe-area-inset-bottom));
   display: flex; gap: var(--s2); align-items: center;
 }
-.chat-input input {
+.chat-input input[type="text"] {
   flex: 1; border: none; background: var(--bg); border-radius: var(--r-pill);
   padding: 12px 16px; font-size: 15px; outline: none;
 }
+.chat-photo {
+  width: 40px; height: 40px; flex: none; border-radius: var(--r-pill);
+  display: grid; place-items: center; color: var(--sub); cursor: pointer;
+}
+.chat-photo:active { background: var(--line); }
+.bubble-img { padding: 4px !important; background: var(--card) !important; max-width: 220px; overflow: hidden; }
+.bubble-img img { width: 100%; border-radius: 14px; display: block; }
+.msg.me .bubble-img { background: var(--lime) !important; }
 .chat-send {
   width: 44px; height: 44px; border-radius: var(--r-pill); flex: none;
   background: var(--lime); display: grid; place-items: center; color: #1a2a00;
@@ -469,6 +482,41 @@ svg { width: 22px; height: 22px; flex: none; }   /* 아이콘 기본 크기 (거
   animation: flashIn .3s ease;
 }
 @keyframes flashIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* ===== 관리자 ===== */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); margin-top: var(--s3); }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 6px; text-align: center; }
+.stat .n { font-size: 22px; font-weight: 800; }
+.stat .l { font-size: 11px; color: var(--sub); margin-top: 2px; }
+.admin-list { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.admin-row { display: flex; align-items: center; gap: var(--s3); padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.admin-row:last-child { border-bottom: none; }
+.admin-row-body { flex: 1; min-width: 0; }
+.admin-row-title { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.admin-row-sub { font-size: 13px; color: #555; margin-top: 3px; word-break: break-word; }
+.admin-row-meta { font-size: 12px; color: var(--sub); margin-top: 3px; }
+.admin-actions { display: flex; gap: 6px; flex: none; }
+.admin-actions .btn-sm { padding: 7px 12px; }
+.tag { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: var(--r-pill); flex: none; }
+.tag-p { background: var(--lime-soft); color: #557000; }
+.tag-u { background: #e6f0ff; color: #2a6; }
+.tag-a { background: var(--text); color: #fff; }
+.tag-d { background: #ffe3e0; color: var(--danger); }
+
+/* ===== 신고 ===== */
+.report-link {
+  display: inline-block; margin-top: var(--s5); color: var(--sub);
+  font-size: 13px; font-weight: 600; text-decoration: underline;
+}
+.report-link:active { color: var(--danger); }
+.report-target {
+  display: flex; align-items: center; gap: var(--s3);
+  background: #fff4f2; border: 1px solid #ffdcd6; color: var(--danger);
+  border-radius: var(--r-md); padding: var(--s4); margin-bottom: var(--s5);
+}
+.report-target svg { width: 26px; height: 26px; }
+.report-kind { font-size: 12px; font-weight: 700; }
+.report-name { font-size: 16px; font-weight: 700; color: var(--text); }
 
 /* ===== empty ===== */
 .empty { text-align: center; color: var(--sub); padding: var(--s8) var(--s5); }

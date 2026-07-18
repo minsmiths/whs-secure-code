@@ -41,13 +41,18 @@
             {% if m['is_deleted'] %}
               <div class="bubble deleted">삭제된 메시지입니다</div>
             {% else %}
-              <div class="bubble" data-body>{{ m['body'] }}</div>
+              {% if m['image_path'] %}
+                <a class="bubble bubble-img" href="{{ url_for('static', filename=m['image_path']) }}" target="_blank" rel="noopener">
+                  <img src="{{ url_for('static', filename=m['image_path']) }}" alt="사진">
+                </a>
+              {% endif %}
+              {% if m['body'] %}<div class="bubble" data-body>{{ m['body'] }}</div>{% endif %}
               <div class="msg-actions">
                 <button type="button" class="react-btn {% if m['reacted'] %}on{% endif %}" data-react="{{ m['id'] }}" aria-label="공감">
                   {{ icon('heart-fill') }}<span data-react-count>{% if m['react_count'] %}{{ m['react_count'] }}{% endif %}</span>
                 </button>
                 {% if mine %}
-                  <button type="button" class="txt-btn" data-edit="{{ m['id'] }}">수정</button>
+                  {% if m['body'] %}<button type="button" class="txt-btn" data-edit="{{ m['id'] }}">수정</button>{% endif %}
                   <button type="button" class="txt-btn del" data-del="{{ m['id'] }}">삭제</button>
                 {% endif %}
               </div>
@@ -64,9 +69,14 @@
 {% endblock %}
 
 {% block bottom %}
-<form class="chat-input" method="post" action="{{ url_for('chat.room', conv_id=conv['id']) }}">
+<form class="chat-input" method="post" action="{{ url_for('chat.room', conv_id=conv['id']) }}"
+      enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="text" name="body" placeholder="메시지 보내기" maxlength="1000" autocomplete="off" required>
+  <label class="chat-photo" aria-label="사진 첨부">
+    {{ icon('photo') }}
+    <input type="file" name="image" accept="image/*" data-autosubmit hidden>
+  </label>
+  <input type="text" name="body" placeholder="메시지 보내기" maxlength="1000" autocomplete="off">
   <button class="chat-send" type="submit" aria-label="전송">{{ icon('send') }}</button>
 </form>
 {% endblock %}
