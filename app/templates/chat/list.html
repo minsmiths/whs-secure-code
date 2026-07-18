@@ -11,6 +11,20 @@
 
 {% block body %}
 <main class="content" style="padding-left:0;padding-right:0">
+
+  <a class="chatrow pinned" href="{{ url_for('chat.global_room') }}">
+    <div class="chatrow-avatar global-avatar">🎾</div>
+    <div class="chatrow-body">
+      <div class="chatrow-top">
+        <span class="chatrow-name">전체 채팅 <span class="live-dot"></span></span>
+        <span class="chatrow-time">실시간</span>
+      </div>
+      <div class="chatrow-last">
+        <span class="chatrow-msg">테니스인 모두와 함께하는 실시간 채팅방</span>
+      </div>
+    </div>
+  </a>
+
   {% if rooms %}
     {% for r in rooms %}
       <a class="chatrow" href="{{ url_for('chat.room', conv_id=r['id']) }}">

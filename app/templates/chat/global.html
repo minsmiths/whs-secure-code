@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}전체 채팅 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('chat.index') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">전체 채팅 🎾 <span class="live-dot"></span></div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
+
+{% block body %}
+<div class="chat-wrap">
+  <div class="chat-scroll" data-global-chat>
+    <div class="chat-day">테니스인들과 실시간으로 소통해보세요</div>
+    {% for m in messages %}
+      <div class="msg {{ 'me' if m['sender_id'] == g.user['id'] else 'them' }}" data-mid="{{ m['id'] }}">
+        <div class="msg-col">
+          {% if m['sender_id'] != g.user['id'] %}<div class="who">{{ m['sender_name'] }}</div>{% endif %}
+          <div class="bubble">{{ m['body'] }}</div>
+        </div>
+        <span class="time">{{ m['created_at']|timeago }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block bottom %}
+<form class="chat-input" data-global-form>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="text" name="body" placeholder="전체 채팅 메시지" maxlength="1000" autocomplete="off" required>
+  <button class="chat-send" type="submit" aria-label="전송">{{ icon('send') }}</button>
+</form>
+{% endblock %}

@@ -11,12 +11,67 @@ from flask import (
 )
 
 from .db import get_db
+from .filters import timeago
 from .security import login_required
 from .uploads import save_image
 
 bp = Blueprint("chat", __name__, url_prefix="/chat")
 
 MAX_MESSAGE_LEN = 1000
+
+
+# ============================================================
+#  전체 채팅 (모두가 함께 보는 실시간 채팅, 폴링 방식)
+# ============================================================
+@bp.route("/global")
+@login_required
+def global_room():
+    rows = get_db().execute(
+        "SELECT gm.*, u.username AS sender_name "
+        "FROM global_message gm JOIN user u ON gm.sender_id = u.id "
+        "ORDER BY gm.id ASC LIMIT 200"
+    ).fetchall()
+    return render_template("chat/global.html", messages=rows)
+
+
+@bp.route("/global/messages")
+@login_required
+def global_messages():
+    """`after` id 이후의 새 메시지를 JSON 으로 반환 (2초 폴링용)."""
+    after = request.args.get("after", 0, type=int)
+    rows = get_db().execute(
+        "SELECT gm.*, u.username AS sender_name "
+        "FROM global_message gm JOIN user u ON gm.sender_id = u.id "
+        "WHERE gm.id > ? ORDER BY gm.id ASC LIMIT 200",
+        (after,),
+    ).fetchall()
+    return jsonify([
+        {
+            "id": r["id"],
+            "sender_name": r["sender_name"],
+            "body": r["body"],
+            "mine": r["sender_id"] == g.user["id"],
+            "time": timeago(r["created_at"]),
+        }
+        for r in rows
+    ])
+
+
+@bp.route("/global/send", methods=("POST",))
+@login_required
+def global_send():
+    body = (request.form.get("body") or "").strip()
+    if not body:
+        return jsonify({"error": "empty"}), 400
+    if len(body) > MAX_MESSAGE_LEN:
+        return jsonify({"error": "too_long"}), 400
+    db = get_db()
+    cur = db.execute(
+        "INSERT INTO global_message (sender_id, body) VALUES (?, ?)",
+        (g.user["id"], body),
+    )
+    db.commit()
+    return jsonify({"ok": True, "id": cur.lastrowid})
 
 
 def _now() -> str:

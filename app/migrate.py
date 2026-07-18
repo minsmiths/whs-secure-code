@@ -32,6 +32,18 @@ EXPECTED_COLUMNS = {
     },
 }
 
+# 나중에 추가된 테이블 (기존 DB에도 없으면 생성 → pull 후 재시작만으로 반영)
+EXPECTED_TABLES = {
+    "global_message": (
+        "CREATE TABLE IF NOT EXISTS global_message ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "sender_id INTEGER NOT NULL, "
+        "body TEXT NOT NULL, "
+        "created_at TEXT NOT NULL DEFAULT (datetime('now')), "
+        "FOREIGN KEY (sender_id) REFERENCES user (id) ON DELETE CASCADE)"
+    ),
+}
+
 
 def run(app) -> None:
     db_path = os.path.join(app.instance_path, app.config["DB_NAME"])
@@ -41,6 +53,21 @@ def run(app) -> None:
     conn = sqlite3.connect(db_path)
     try:
         added = []
+        # 1) 빠진 테이블 생성 (기존 user 테이블이 있을 때만 = init-db 이후)
+        has_user = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='user'"
+        ).fetchone()
+        if has_user:
+            for table, ddl in EXPECTED_TABLES.items():
+                exists = conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                    (table,),
+                ).fetchone()
+                if not exists:
+                    conn.execute(ddl)
+                    added.append(f"table:{table}")
+
+        # 2) 빠진 컬럼 추가
         for table, cols in EXPECTED_COLUMNS.items():
             info = conn.execute(f"PRAGMA table_info({table})").fetchall()
             if not info:
@@ -52,7 +79,7 @@ def run(app) -> None:
                     added.append(f"{table}.{col}")
         if added:
             conn.commit()
-            app.logger.info("자동 마이그레이션: 컬럼 추가 %s", ", ".join(added))
+            app.logger.info("자동 마이그레이션: %s", ", ".join(added))
     except sqlite3.Error as exc:
         app.logger.warning("자동 마이그레이션 건너뜀: %s", exc)
     finally:

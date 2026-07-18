@@ -126,6 +126,20 @@ def _seed() -> None:
                 )
         db.commit()
 
+    # 샘플 전체 채팅 메시지
+    gcount = db.execute("SELECT COUNT(*) AS c FROM global_message").fetchone()["c"]
+    if gcount == 0:
+        for name, body in [
+            ("courtking", "안녕하세요! 다들 어느 코트 다니세요? 🎾"),
+            ("baseliner", "저는 주로 올림픽공원이요! 주말에 같이 치실 분~"),
+            ("minsmith", "EZONE 방금 올렸어요, 관심 있으시면 채팅 주세요!"),
+        ]:
+            db.execute(
+                "INSERT INTO global_message (sender_id, body) VALUES (?, ?)",
+                (uid(name), body),
+            )
+        db.commit()
+
     # 샘플 신고 (관리자 페이지 시연용)
     rcount = db.execute("SELECT COUNT(*) AS c FROM report").fetchone()["c"]
     if rcount == 0:

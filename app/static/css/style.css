@@ -386,6 +386,18 @@ svg { width: 22px; height: 22px; flex: none; }   /* 아이콘 기본 크기 (거
 /* ===== 채팅 목록 ===== */
 .chatrow { display: flex; gap: var(--s3); padding: 14px var(--s5); align-items: center; }
 .chatrow:active { background: var(--line); }
+.chatrow.pinned { background: var(--lime-soft); border-bottom: 1px solid var(--line); }
+.chatrow.pinned:active { background: #e4f2c0; }
+.global-avatar {
+  width: 56px; height: 56px; border-radius: var(--r-pill); flex: none;
+  background: var(--lime); display: grid; place-items: center; font-size: 28px;
+}
+.live-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: #ff3b30; margin-left: 4px; vertical-align: middle;
+  animation: livePulse 1.4s infinite;
+}
+@keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 .chatrow-avatar { width: 56px; height: 56px; border-radius: var(--r-pill); overflow: hidden; flex: none; }
 .chatrow-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .chatrow-avatar .placeholder .ph-emoji { font-size: 26px; }

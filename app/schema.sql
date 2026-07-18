@@ -5,6 +5,7 @@
 
 PRAGMA foreign_keys = ON;
 
+DROP TABLE IF EXISTS global_message;
 DROP TABLE IF EXISTS message_reaction;
 DROP TABLE IF EXISTS message;
 DROP TABLE IF EXISTS conversation;
@@ -118,6 +119,18 @@ CREATE TABLE message_reaction (
 );
 
 -- ----------------------------------------------------------------
+-- 전체 채팅 메시지 (모든 사용자가 함께 보는 실시간 채팅)
+--   특정 채팅방(conversation)에 속하지 않는 공개 메시지
+-- ----------------------------------------------------------------
+CREATE TABLE global_message (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id  INTEGER NOT NULL,
+    body       TEXT    NOT NULL,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (sender_id) REFERENCES user (id) ON DELETE CASCADE
+);
+
+-- ----------------------------------------------------------------
 -- 신고
 -- ----------------------------------------------------------------
 CREATE TABLE report (
@@ -151,4 +164,5 @@ CREATE INDEX idx_conv_buyer       ON conversation (buyer_id);
 CREATE INDEX idx_conv_seller      ON conversation (seller_id);
 CREATE INDEX idx_message_conv     ON message (conversation_id);
 CREATE INDEX idx_reaction_message ON message_reaction (message_id);
+CREATE INDEX idx_global_created   ON global_message (id);
 CREATE INDEX idx_report_target    ON report (target_type, target_id);

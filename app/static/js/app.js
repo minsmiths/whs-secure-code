@@ -87,6 +87,86 @@
     if (s) s.scrollTop = s.scrollHeight;
   }
 
+  /* ---- 전체 채팅: 2초 폴링으로 새 메시지 자동 수신 (실시간) ---- */
+  function bindGlobalChat() {
+    var box = document.querySelector("[data-global-chat]");
+    if (!box) return;
+
+    var lastId = 0;
+    box.querySelectorAll(".msg[data-mid]").forEach(function (el) {
+      lastId = Math.max(lastId, parseInt(el.getAttribute("data-mid"), 10) || 0);
+    });
+
+    function appendMessage(m) {
+      // XSS 방지: 사용자 입력은 textContent 로만 삽입 (innerHTML 사용 안 함)
+      var wrap = document.createElement("div");
+      wrap.className = "msg " + (m.mine ? "me" : "them");
+      wrap.setAttribute("data-mid", m.id);
+      var col = document.createElement("div");
+      col.className = "msg-col";
+      if (!m.mine) {
+        var who = document.createElement("div");
+        who.className = "who";
+        who.textContent = m.sender_name;
+        col.appendChild(who);
+      }
+      var bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = m.body;
+      col.appendChild(bubble);
+      var time = document.createElement("span");
+      time.className = "time";
+      time.textContent = m.time;
+      wrap.appendChild(col);
+      wrap.appendChild(time);
+      box.appendChild(wrap);
+    }
+
+    function poll() {
+      fetch("/chat/global/messages?after=" + lastId, {
+        headers: { "X-Requested-With": "fetch" }
+      })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (list) {
+          if (!list || !list.length) return;
+          var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+          list.forEach(function (m) {
+            appendMessage(m);
+            lastId = Math.max(lastId, m.id);
+          });
+          if (atBottom) box.scrollTop = box.scrollHeight;
+        })
+        .catch(function () {});
+    }
+
+    var form = document.querySelector("[data-global-form]");
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var input = form.querySelector('input[name="body"]');
+        var body = (input.value || "").trim();
+        if (!body) return;
+        fetch("/chat/global/send", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken(),
+            "X-Requested-With": "fetch",
+            "Content-Type": "application/x-www-form-urlencoded"
+          },
+          body: "body=" + encodeURIComponent(body)
+        })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (d && d.ok) { input.value = ""; poll(); }
+          })
+          .catch(function () {});
+      });
+    }
+
+    box.scrollTop = box.scrollHeight;
+    setInterval(poll, 2000);
+  }
+
   /* ---- 채팅 메시지 액션 (공감 / 수정 / 삭제) ---- */
   function post(url, body) {
     return fetch(url, {
@@ -173,6 +253,7 @@
     bindConfirms();
     bindFlashes();
     bindChatActions();
+    bindGlobalChat();
     scrollChat();
   });
 })();
