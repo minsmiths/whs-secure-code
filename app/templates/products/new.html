@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}상품 등록 · Deuce Market{% endblock %}
+
+{% block content %}
+<h1>상품 등록</h1>
+
+<form class="form" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <label>상품명
+    <input type="text" name="title" maxlength="100" required>
+  </label>
+
+  <label>카테고리
+    <select name="category">
+      {% for c in categories %}
+        <option value="{{ c }}">{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label>가격 (원)
+    <input type="number" name="price" min="0" step="1" required>
+  </label>
+
+  <label>상품 설명
+    <textarea name="description" rows="6" maxlength="2000"></textarea>
+  </label>
+
+  <label>상품 사진
+    <input type="file" name="image" accept="image/*">
+  </label>
+
+  <button class="btn" type="submit">등록하기</button>
+</form>
+{% endblock %}

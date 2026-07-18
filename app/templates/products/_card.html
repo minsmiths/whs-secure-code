@@ -1,0 +1,13 @@
+<a class="product-card" href="{{ url_for('products.detail', product_id=p['id']) }}">
+  {% if p['image_path'] %}
+    <img class="product-thumb" src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['title'] }}">
+  {% else %}
+    <div class="product-thumb placeholder">🎾</div>
+  {% endif %}
+  <div class="product-card-body">
+    <span class="product-category">{{ p['category'] }}</span>
+    <h3 class="product-title">{{ p['title'] }}</h3>
+    <p class="product-price">{{ "{:,}".format(p['price']) }}원</p>
+    <p class="product-seller">판매자: {{ p['seller_name'] }}</p>
+  </div>
+</a>

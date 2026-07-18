@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ product['title'] }} · Deuce Market{% endblock %}
+
+{% block content %}
+<div class="product-detail">
+  <div class="product-detail-image">
+    {% if product['image_path'] %}
+      <img src="{{ url_for('static', filename=product['image_path']) }}" alt="{{ product['title'] }}">
+    {% else %}
+      <div class="product-thumb placeholder large">🎾</div>
+    {% endif %}
+  </div>
+
+  <div class="product-detail-info">
+    <span class="product-category">{{ product['category'] }}</span>
+    <h1>{{ product['title'] }}</h1>
+    <p class="product-price large">{{ "{:,}".format(product['price']) }}원</p>
+    <p class="product-seller">
+      판매자:
+      <a href="{{ url_for('auth.user_detail', user_id=product['seller_id']) }}">
+        {{ product['seller_name'] }}
+      </a>
+    </p>
+
+    {# description 은 Jinja2 자동 이스케이프로 XSS 방지됨 #}
+    <div class="product-description">{{ product['description'] }}</div>
+
+    {% if g.user and g.user['id'] != product['seller_id'] %}
+      <div class="detail-actions">
+        <a class="btn" href="{{ url_for('auth.user_detail', user_id=product['seller_id']) }}">판매자에게 문의</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<p><a href="{{ url_for('products.index') }}">← 목록으로</a></p>
+{% endblock %}

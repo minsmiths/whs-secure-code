@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <h1>🎾 라켓부터 스트링까지, 테니스 중고거래</h1>
+  <p>Deuce Market에서 안전하게 테니스 용품을 사고팔아 보세요.</p>
+  <form class="search-bar" action="{{ url_for('products.index') }}" method="get">
+    <input type="text" name="q" placeholder="라켓, 스트링, 테니스화 검색..." maxlength="100">
+    <button type="submit">검색</button>
+  </form>
+</section>
+
+<section>
+  <h2>최근 등록된 상품</h2>
+  {% if products %}
+    <div class="product-grid">
+      {% for p in products %}
+        {% include "products/_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty">아직 등록된 상품이 없습니다. 첫 상품을 등록해 보세요!</p>
+  {% endif %}
+</section>
+{% endblock %}

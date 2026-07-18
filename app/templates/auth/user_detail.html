@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ user['username'] }} · Deuce Market{% endblock %}
+
+{% block content %}
+<h1>{{ user['username'] }}님의 프로필</h1>
+
+<section class="profile-summary">
+  <p><strong>소개글:</strong></p>
+  <div class="product-description">{{ user['bio'] or '(소개글이 없습니다)' }}</div>
+  <p><strong>가입일:</strong> {{ user['created_at'] }}</p>
+</section>
+
+<h2>판매 중인 상품</h2>
+{% if products %}
+  <div class="product-grid">
+    {% for p in products %}
+      <a class="product-card" href="{{ url_for('products.detail', product_id=p['id']) }}">
+        {% if p['image_path'] %}
+          <img class="product-thumb" src="{{ url_for('static', filename=p['image_path']) }}" alt="{{ p['title'] }}">
+        {% else %}
+          <div class="product-thumb placeholder">🎾</div>
+        {% endif %}
+        <div class="product-card-body">
+          <h3 class="product-title">{{ p['title'] }}</h3>
+          <p class="product-price">{{ "{:,}".format(p['price']) }}원</p>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="empty">판매 중인 상품이 없습니다.</p>
+{% endif %}
+{% endblock %}

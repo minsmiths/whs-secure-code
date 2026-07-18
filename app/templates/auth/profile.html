@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}마이페이지 · Deuce Market{% endblock %}
+
+{% block content %}
+<h1>마이페이지</h1>
+
+<section class="profile-summary">
+  <p><strong>아이디:</strong> {{ user['username'] }}</p>
+  <p><strong>보유 잔액:</strong> {{ "{:,}".format(user['balance']) }}원</p>
+  <p><strong>가입일:</strong> {{ user['created_at'] }}</p>
+</section>
+
+<section class="card">
+  <h2>소개글 수정</h2>
+  <form class="form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="update_bio">
+    <label>소개글
+      <textarea name="bio" rows="4" maxlength="500">{{ user['bio'] }}</textarea>
+    </label>
+    <button class="btn" type="submit">저장</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>비밀번호 변경</h2>
+  <form class="form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="change_password">
+    <label>현재 비밀번호
+      <input type="password" name="current_password" required>
+    </label>
+    <label>새 비밀번호
+      <input type="password" name="new_password" minlength="8" required>
+    </label>
+    <button class="btn" type="submit">비밀번호 변경</button>
+  </form>
+</section>
+{% endblock %}
