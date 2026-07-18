@@ -87,11 +87,85 @@
     if (s) s.scrollTop = s.scrollHeight;
   }
 
+  /* ---- 채팅 메시지 액션 (공감 / 수정 / 삭제) ---- */
+  function post(url, body) {
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrfToken(),
+        "X-Requested-With": "fetch",
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: body || ""
+    });
+  }
+
+  function bindChatActions() {
+    // 공감 토글
+    document.querySelectorAll("[data-react]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        post("/chat/message/" + btn.getAttribute("data-react") + "/react")
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d) return;
+            btn.classList.toggle("on", d.reacted);
+            var svg = btn.querySelector("svg");
+            if (svg && d.reacted) {
+              svg.classList.remove("heart-animate"); void svg.offsetWidth;
+              svg.classList.add("heart-animate");
+            }
+            var c = btn.querySelector("[data-react-count]");
+            if (c) c.textContent = d.count > 0 ? d.count : "";
+          });
+      });
+    });
+
+    // 수정
+    document.querySelectorAll("[data-edit]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-edit");
+        var wrap = btn.closest(".msg");
+        var bubble = wrap ? wrap.querySelector("[data-body]") : null;
+        if (!bubble) return;
+        var cur = bubble.textContent;
+        var next = window.prompt("메시지 수정", cur);
+        if (next === null) return;
+        next = next.trim();
+        if (!next || next === cur) return;
+        post("/chat/message/" + id + "/edit", "body=" + encodeURIComponent(next))
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.ok) return;
+            bubble.textContent = d.body;
+            var t = wrap.querySelector(".time");
+            if (t && t.textContent.indexOf("수정됨") === -1) t.textContent = "수정됨 · " + t.textContent;
+          });
+      });
+    });
+
+    // 삭제
+    document.querySelectorAll("[data-del]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (!window.confirm("이 메시지를 삭제하시겠습니까?")) return;
+        var id = btn.getAttribute("data-del");
+        var wrap = btn.closest(".msg");
+        post("/chat/message/" + id + "/delete")
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.ok || !wrap) return;
+            var col = wrap.querySelector(".msg-col");
+            if (col) col.innerHTML = '<div class="bubble deleted">삭제된 메시지입니다</div>';
+          });
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     bindFavorites();
     bindCarousels();
     bindConfirms();
     bindFlashes();
+    bindChatActions();
     scrollChat();
   });
 })();

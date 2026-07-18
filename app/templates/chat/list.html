@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% set active_tab = 'chat' %}
+{% block title %}채팅 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar bordered">
+  <div class="topbar-greeting" style="font-size:20px">채팅</div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content" style="padding-left:0;padding-right:0">
+  {% if rooms %}
+    {% for r in rooms %}
+      <a class="chatrow" href="{{ url_for('chat.room', conv_id=r['id']) }}">
+        <div class="chatrow-avatar">
+          {% if r['product_image'] %}
+            <img src="{{ url_for('static', filename=r['product_image']) }}" alt="">
+          {% else %}
+            <div class="placeholder {{ r['product_category']|ph_class }}"><span class="ph-emoji">{{ r['product_category']|ph_emoji }}</span></div>
+          {% endif %}
+        </div>
+        <div class="chatrow-body">
+          <div class="chatrow-top">
+            <span class="chatrow-name">{{ r['other_name'] }}</span>
+            <span class="chatrow-time">{{ r['last_at']|timeago }}</span>
+          </div>
+          <div class="chatrow-product">🎾 {{ r['product_title'] }}</div>
+          <div class="chatrow-last">
+            <span class="chatrow-msg">{{ r['last_body'] }}</span>
+            {% if r['unread'] > 0 %}<span class="unread">{{ r['unread'] if r['unread'] < 100 else '99+' }}</span>{% endif %}
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <div class="emoji">💬</div>
+      아직 채팅이 없어요.<br>마음에 드는 상품에서 판매자와 대화를 시작해보세요!
+    </div>
+  {% endif %}
+</main>
+{% endblock %}

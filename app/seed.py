@@ -75,21 +75,51 @@ def seed_command() -> None:
         db.commit()
         click.echo(f"샘플 상품 {len(SAMPLE_PRODUCTS)}개 생성 완료")
 
-    # 샘플 전체 채팅 메시지
-    mcount = db.execute(
-        "SELECT COUNT(*) AS c FROM message WHERE recipient_id IS NULL"
-    ).fetchone()["c"]
-    if mcount == 0:
-        chats = [
-            ("courtking", "안녕하세요! 다들 어느 코트 다니세요?"),
-            ("baseliner", "저는 주로 올림픽공원 쪽이요 🎾"),
-            ("minsmith", "EZONE 방금 올렸어요~ 관심 있으시면 채팅 주세요!"),
-        ]
-        for name, body in chats:
-            db.execute(
-                "INSERT INTO message (sender_id, recipient_id, body) VALUES (?, NULL, ?)",
-                (uid(name), body),
+    # 샘플 1:1 채팅방 + 메시지
+    ccount = db.execute("SELECT COUNT(*) AS c FROM conversation").fetchone()["c"]
+    if ccount == 0:
+        def pid(title_like):
+            return db.execute(
+                "SELECT id, seller_id FROM product WHERE title LIKE ? LIMIT 1",
+                (f"%{title_like}%",),
+            ).fetchone()
+
+        # minsmith(구매자) ↔ courtking(판매자): Nike Vapor 신발
+        shoes = pid("Vapor")
+        if shoes:
+            cur = db.execute(
+                "INSERT INTO conversation (product_id, buyer_id, seller_id) VALUES (?, ?, ?)",
+                (shoes["id"], uid("minsmith"), shoes["seller_id"]),
             )
+            cid = cur.lastrowid
+            convo = [
+                ("minsmith", "안녕하세요! 신발 275도 있을까요?"),
+                ("courtking", "네 안녕하세요 :) 270만 남아있어요!"),
+                ("minsmith", "아 그렇군요. 상태는 어떤가요?"),
+                ("courtking", "3개월 신어서 아웃솔 거의 그대로예요 🎾"),
+            ]
+            for name, body in convo:
+                db.execute(
+                    "INSERT INTO message (conversation_id, sender_id, body) VALUES (?, ?, ?)",
+                    (cid, uid(name), body),
+                )
+
+        # baseliner(구매자) ↔ minsmith(판매자): EZONE 라켓
+        racket = pid("EZONE")
+        if racket:
+            cur = db.execute(
+                "INSERT INTO conversation (product_id, buyer_id, seller_id) VALUES (?, ?, ?)",
+                (racket["id"], uid("baseliner"), racket["seller_id"]),
+            )
+            cid = cur.lastrowid
+            for name, body in [
+                ("baseliner", "EZONE 그립 G2 맞나요?"),
+                ("minsmith", "네 맞습니다! 오버그립 새로 감아둘게요~"),
+            ]:
+                db.execute(
+                    "INSERT INTO message (conversation_id, sender_id, body) VALUES (?, ?, ?)",
+                    (cid, uid(name), body),
+                )
         db.commit()
 
     click.echo("시드 데이터 준비 완료.")

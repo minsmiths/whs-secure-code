@@ -1,40 +1,72 @@
 {% extends "base.html" %}
 {% from "_icons.html" import icon %}
-{% block title %}전체 채팅 · Deuce Market{% endblock %}
+{% block title %}{{ other['username'] }} · 채팅{% endblock %}
 
 {% block topbar %}
 <header class="topbar-nav">
-  <a class="icon-btn" href="{{ url_for('main.index') }}">{{ icon('back') }}</a>
-  <div class="topbar-title">전체 채팅 🎾</div>
-  <div class="spacer"></div>
+  <a class="icon-btn" href="{{ url_for('chat.index') }}">{{ icon('back') }}</a>
+  <div class="topbar-title">{{ other['username'] }}</div>
+  <form method="post" action="{{ url_for('chat.leave', conv_id=conv['id']) }}"
+        data-confirm="채팅방을 나가시겠습니까? 목록에서 사라집니다.">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="icon-btn" type="submit" aria-label="채팅방 나가기">{{ icon('exit') }}</button>
+  </form>
 </header>
 {% endblock %}
 
 {% block body %}
 <div class="chat-wrap">
+  <a class="chat-product" href="{{ url_for('products.detail', product_id=product['id']) }}">
+    <div class="chat-product-thumb">
+      {% if product['image_path'] %}
+        <img src="{{ url_for('static', filename=product['image_path']) }}" alt="">
+      {% else %}
+        <div class="placeholder {{ product['category']|ph_class }}"><span class="ph-emoji" style="font-size:22px">{{ product['category']|ph_emoji }}</span></div>
+      {% endif %}
+    </div>
+    <div class="chat-product-info">
+      <div class="t">{{ product['title'] }}</div>
+      <div class="p">{{ product['price']|krw }}원</div>
+    </div>
+    {{ icon('chev') }}
+  </a>
+
   <div class="chat-scroll">
     {% if messages %}
       {% for m in messages %}
         {% set mine = (m['sender_id'] == g.user['id']) %}
-        <div class="msg {{ 'me' if mine else 'them' }}">
+        <div class="msg {{ 'me' if mine else 'them' }}" data-msg="{{ m['id'] }}">
           <div class="msg-col">
-            {% if not mine %}<div class="who">{{ m['sender_name'] }}</div>{% endif %}
-            <div class="bubble">{{ m['body'] }}</div>
+            {% if not mine %}<div class="who">{{ other['username'] }}</div>{% endif %}
+            {% if m['is_deleted'] %}
+              <div class="bubble deleted">삭제된 메시지입니다</div>
+            {% else %}
+              <div class="bubble" data-body>{{ m['body'] }}</div>
+              <div class="msg-actions">
+                <button type="button" class="react-btn {% if m['reacted'] %}on{% endif %}" data-react="{{ m['id'] }}" aria-label="공감">
+                  {{ icon('heart-fill') }}<span data-react-count>{% if m['react_count'] %}{{ m['react_count'] }}{% endif %}</span>
+                </button>
+                {% if mine %}
+                  <button type="button" class="txt-btn" data-edit="{{ m['id'] }}">수정</button>
+                  <button type="button" class="txt-btn del" data-del="{{ m['id'] }}">삭제</button>
+                {% endif %}
+              </div>
+            {% endif %}
           </div>
-          <span class="time">{{ m['created_at']|timeago }}</span>
+          <span class="time">{% if m['edited_at'] %}수정됨 · {% endif %}{{ m['created_at']|timeago }}</span>
         </div>
       {% endfor %}
     {% else %}
-      <div class="empty"><div class="emoji">💬</div>첫 메시지를 남겨보세요!</div>
+      <div class="empty"><div class="emoji">👋</div>대화를 시작해보세요!</div>
     {% endif %}
   </div>
 </div>
 {% endblock %}
 
 {% block bottom %}
-<form class="chat-input" method="post" action="{{ url_for('chat.room') }}">
+<form class="chat-input" method="post" action="{{ url_for('chat.room', conv_id=conv['id']) }}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-  <input type="text" name="body" placeholder="메시지 보내기" maxlength="500" autocomplete="off" required>
+  <input type="text" name="body" placeholder="메시지 보내기" maxlength="1000" autocomplete="off" required>
   <button class="chat-send" type="submit" aria-label="전송">{{ icon('send') }}</button>
 </form>
 {% endblock %}

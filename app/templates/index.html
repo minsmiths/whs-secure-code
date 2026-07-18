@@ -19,7 +19,7 @@
     <input type="text" name="q" placeholder="라켓, 브랜드, 용품 검색" maxlength="100">
   </form>
 
-  <div class="chips">
+  <div class="chips wrap">
     {% for c in categories %}
       <a class="chip" href="{{ url_for('products.index', category=c) }}">{{ c }}</a>
     {% endfor %}
