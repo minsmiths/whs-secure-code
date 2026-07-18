@@ -25,3 +25,7 @@ app/static/uploads/*
 .idea/
 .vscode/
 *.swp
+
+# 보고서 파일은 git에 포함하지 않음
+*.docx
+docs/
