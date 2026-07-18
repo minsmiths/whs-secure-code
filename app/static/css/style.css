@@ -406,10 +406,16 @@ svg { width: 22px; height: 22px; flex: none; }   /* 아이콘 기본 크기 (거
 .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 56px); }
 
 /* 채팅방 상단 상품 배너 */
+.chat-product-bar { background: var(--card); border-bottom: 1px solid var(--line); flex: none; }
 .chat-product {
   display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s5);
-  background: var(--card); border-bottom: 1px solid var(--line); flex: none;
 }
+.chat-pay {
+  display: block; text-align: center; margin: 0 var(--s5) 10px;
+  background: var(--lime); color: #1a2a00; font-weight: 700; font-size: 14px;
+  padding: 10px; border-radius: var(--r-md);
+}
+.chat-pay:active { background: var(--lime-press); }
 .chat-product-thumb { width: 44px; height: 44px; border-radius: var(--r-sm); overflow: hidden; flex: none; }
 .chat-product-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .chat-product-info { flex: 1; min-width: 0; }
@@ -482,6 +488,22 @@ svg { width: 22px; height: 22px; flex: none; }   /* 아이콘 기본 크기 (거
   animation: flashIn .3s ease;
 }
 @keyframes flashIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* ===== 송금(구매) 확인 ===== */
+.pay-hero { padding: var(--s5) 0 var(--s4); }
+.pay-q { font-size: 24px; font-weight: 800; line-height: 1.35; }
+.pay-card {
+  display: flex; gap: var(--s3); align-items: center; padding: var(--s4);
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+  margin-bottom: var(--s6);
+}
+.pay-thumb { width: 64px; height: 64px; border-radius: var(--r-md); overflow: hidden; flex: none; }
+.pay-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pay-thumb .placeholder .ph-emoji { font-size: 28px; }
+.pay-info { flex: 1; min-width: 0; }
+.pay-seller { font-size: 13px; color: var(--sub); }
+.pay-title { font-size: 15px; font-weight: 700; margin: 2px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pay-price { font-size: 18px; font-weight: 800; }
 
 /* ===== 관리자 ===== */
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2); margin-top: var(--s3); }

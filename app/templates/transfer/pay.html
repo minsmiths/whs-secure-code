@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}송금 · Deuce Market{% endblock %}
+
+{% block topbar %}
+<header class="topbar-nav">
+  <a class="icon-btn" href="{{ url_for('products.detail', product_id=product['id']) }}">{{ icon('back') }}</a>
+  <div class="topbar-title">송금하기</div>
+  <div class="spacer"></div>
+</header>
+{% endblock %}
+
+{% block body %}
+<main class="content">
+
+  <div class="pay-hero">
+    <div class="pay-q">해당 판매자에게<br>돈을 보내시겠습니까?</div>
+  </div>
+
+  <div class="pay-card">
+    <div class="pay-thumb">
+      {% if product['image_path'] %}
+        <img src="{{ url_for('static', filename=product['image_path']) }}" alt="">
+      {% else %}
+        <div class="placeholder {{ product['category']|ph_class }}"><span class="ph-emoji">{{ product['category']|ph_emoji }}</span></div>
+      {% endif %}
+    </div>
+    <div class="pay-info">
+      <div class="pay-seller">받는 사람 · <b>{{ product['seller_name'] }}</b></div>
+      <div class="pay-title">{{ product['title'] }}</div>
+      <div class="pay-price">{{ product['price']|krw }}원</div>
+    </div>
+  </div>
+
+  <form class="form" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="field">
+      <label>보낼 금액 (원)</label>
+      <input type="number" name="amount" min="1" step="1" value="{{ product['price'] }}" required>
+      <div class="hint">내 잔액 {{ balance|krw }}원</div>
+    </div>
+    <button class="btn btn-primary" type="submit">💸 {{ product['seller_name'] }}님에게 송금하기</button>
+    <a class="btn btn-outline" href="{{ url_for('products.detail', product_id=product['id']) }}">취소</a>
+  </form>
+
+</main>
+{% endblock %}

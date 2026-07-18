@@ -16,20 +16,25 @@
 
 {% block body %}
 <div class="chat-wrap">
-  <a class="chat-product" href="{{ url_for('products.detail', product_id=product['id']) }}">
-    <div class="chat-product-thumb">
-      {% if product['image_path'] %}
-        <img src="{{ url_for('static', filename=product['image_path']) }}" alt="">
-      {% else %}
-        <div class="placeholder {{ product['category']|ph_class }}"><span class="ph-emoji" style="font-size:22px">{{ product['category']|ph_emoji }}</span></div>
-      {% endif %}
-    </div>
-    <div class="chat-product-info">
-      <div class="t">{{ product['title'] }}</div>
-      <div class="p">{{ product['price']|krw }}원</div>
-    </div>
-    {{ icon('chev') }}
-  </a>
+  <div class="chat-product-bar">
+    <a class="chat-product" href="{{ url_for('products.detail', product_id=product['id']) }}">
+      <div class="chat-product-thumb">
+        {% if product['image_path'] %}
+          <img src="{{ url_for('static', filename=product['image_path']) }}" alt="">
+        {% else %}
+          <div class="placeholder {{ product['category']|ph_class }}"><span class="ph-emoji" style="font-size:22px">{{ product['category']|ph_emoji }}</span></div>
+        {% endif %}
+      </div>
+      <div class="chat-product-info">
+        <div class="t">{{ product['title'] }}</div>
+        <div class="p">{{ product['price']|krw }}원</div>
+      </div>
+      {{ icon('chev') }}
+    </a>
+    {% if g.user['id'] != product['seller_id'] and product['status'] != 'blocked' %}
+      <a class="chat-pay" href="{{ url_for('transfer.pay', product_id=product['id']) }}">💸 이 상품 송금하기</a>
+    {% endif %}
+  </div>
 
   <div class="chat-scroll">
     {% if messages %}

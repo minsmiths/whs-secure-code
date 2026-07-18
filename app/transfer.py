@@ -18,6 +18,42 @@ bp = Blueprint("transfer", __name__, url_prefix="/transfer")
 MAX_AMOUNT = 100_000_000
 
 
+def _parse_amount(amount_raw: str):
+    """금액 문자열을 검증. (amount, None) 또는 (None, 에러메시지)."""
+    try:
+        amount = int(amount_raw)
+    except (TypeError, ValueError):
+        return None, "금액은 숫자여야 합니다."
+    if amount <= 0:
+        return None, "송금 금액은 1원 이상이어야 합니다."
+    if amount > MAX_AMOUNT:
+        return None, "송금 금액이 너무 큽니다."
+    return amount, None
+
+
+def _execute_transfer(db, sender_id: int, receiver_id: int, amount: int) -> str | None:
+    """원자적 송금 실행. 성공 시 None, 실패 시 에러 메시지 반환.
+
+    'balance >= amount' 조건부 차감으로 동시 요청에서도 음수 잔액/이중지불을 막는다.
+    """
+    cur = db.execute(
+        "UPDATE user SET balance = balance - ? WHERE id = ? AND balance >= ?",
+        (amount, sender_id, amount),
+    )
+    if cur.rowcount != 1:
+        db.rollback()
+        return "잔액이 부족합니다."
+    db.execute(
+        "UPDATE user SET balance = balance + ? WHERE id = ?", (amount, receiver_id)
+    )
+    db.execute(
+        "INSERT INTO transfer (sender_id, receiver_id, amount) VALUES (?, ?, ?)",
+        (sender_id, receiver_id, amount),
+    )
+    db.commit()
+    return None
+
+
 @bp.route("/", methods=("GET", "POST"))
 @login_required
 def index():
@@ -25,19 +61,7 @@ def index():
 
     if request.method == "POST":
         to_username = request.form.get("to_username", "").strip()
-        amount_raw = request.form.get("amount", "").strip()
-
-        error = None
-        amount = None
-        try:
-            amount = int(amount_raw)
-        except (TypeError, ValueError):
-            error = "금액은 숫자여야 합니다."
-        else:
-            if amount <= 0:
-                error = "송금 금액은 1원 이상이어야 합니다."
-            elif amount > MAX_AMOUNT:
-                error = "송금 금액이 너무 큽니다."
+        amount, error = _parse_amount(request.form.get("amount", "").strip())
 
         receiver = None
         if error is None:
@@ -52,28 +76,11 @@ def index():
                 error = "휴면 계정에는 송금할 수 없습니다."
 
         if error is None:
-            # 조건부 차감: 잔액이 충분할 때만 차감되어 rowcount=1
-            cur = db.execute(
-                "UPDATE user SET balance = balance - ? WHERE id = ? AND balance >= ?",
-                (amount, g.user["id"], amount),
-            )
-            if cur.rowcount != 1:
-                db.rollback()
-                flash("잔액이 부족합니다.")
-                return redirect(url_for("transfer.index"))
+            error = _execute_transfer(db, g.user["id"], receiver["id"], amount)
 
-            db.execute(
-                "UPDATE user SET balance = balance + ? WHERE id = ?",
-                (amount, receiver["id"]),
-            )
-            db.execute(
-                "INSERT INTO transfer (sender_id, receiver_id, amount) VALUES (?, ?, ?)",
-                (g.user["id"], receiver["id"], amount),
-            )
-            db.commit()
+        if error is None:
             flash(f"{to_username}님에게 {amount:,}원을 송금했습니다.")
             return redirect(url_for("transfer.index"))
-
         flash(error)
 
     # 최신 잔액 다시 조회
@@ -95,3 +102,39 @@ def index():
         "transfer/index.html",
         balance=me["balance"], history=history, prefill=prefill,
     )
+
+
+@bp.route("/pay/<int:product_id>", methods=("GET", "POST"))
+@login_required
+def pay(product_id: int):
+    """상품 구매 → 해당 판매자에게 송금하는 확인 페이지.
+
+    받는 사람은 상품의 판매자로 서버에서 결정한다(사용자 입력을 신뢰하지 않음).
+    """
+    db = get_db()
+    product = db.execute(
+        "SELECT p.*, u.username AS seller_name, u.is_active AS seller_active "
+        "FROM product p JOIN user u ON p.seller_id = u.id WHERE p.id = ?",
+        (product_id,),
+    ).fetchone()
+
+    if product is None or product["status"] == "blocked":
+        flash("존재하지 않는 상품입니다.")
+        return redirect(url_for("products.index"))
+    if product["seller_id"] == g.user["id"]:
+        flash("본인 상품은 구매할 수 없습니다.")
+        return redirect(url_for("products.detail", product_id=product_id))
+
+    if request.method == "POST":
+        amount, error = _parse_amount(request.form.get("amount", "").strip())
+        if error is None and product["seller_active"] == 0:
+            error = "휴면 계정에는 송금할 수 없습니다."
+        if error is None:
+            error = _execute_transfer(db, g.user["id"], product["seller_id"], amount)
+        if error is None:
+            flash(f"{product['seller_name']}님에게 {amount:,}원을 송금했습니다.")
+            return redirect(url_for("transfer.index"))
+        flash(error)
+
+    me = db.execute("SELECT balance FROM user WHERE id = ?", (g.user["id"],)).fetchone()
+    return render_template("transfer/pay.html", product=product, balance=me["balance"])
