@@ -37,6 +37,10 @@ SAMPLE_PRODUCTS = [
 
 @click.command("seed")
 def seed_command() -> None:
+    _seed()
+
+
+def _seed() -> None:
     db = get_db()
 
     admin_pw = os.environ.get("ADMIN_PASSWORD", "admin-Deuce-2026!")

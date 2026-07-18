@@ -25,9 +25,13 @@ def create_app(config_class: type = Config) -> Flask:
     csrf.init_app(app)
 
     # === DB ===
-    from . import db, seed
+    from . import db, seed, migrate
     db.init_app(app)
     seed.init_app(app)
+
+    # 기존 DB에 새 컬럼이 없으면 자동으로 추가 (git pull 후 데이터 보존 마이그레이션)
+    with app.app_context():
+        migrate.run(app)
 
     # === Jinja 필터 (timeago, krw, placeholder) ===
     from . import filters

@@ -44,7 +44,17 @@ def init_db_command() -> None:
     click.echo("데이터베이스를 초기화했습니다. (deuce_market.sqlite)")
 
 
+@click.command("reset-db")
+def reset_db_command() -> None:
+    """`flask reset-db` 로 DB를 초기화하고 샘플 데이터까지 한 번에 넣는다."""
+    from .seed import _seed  # 지연 임포트(순환참조 방지)
+    init_db()
+    _seed()
+    click.echo("DB를 초기화하고 샘플 데이터를 넣었습니다.")
+
+
 def init_app(app) -> None:
     """앱에 DB 관련 훅과 CLI 명령을 등록한다."""
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(reset_db_command)
