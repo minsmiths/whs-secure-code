@@ -19,16 +19,18 @@ DROP TABLE IF EXISTS user;
 -- 사용자
 -- ----------------------------------------------------------------
 CREATE TABLE user (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    username      TEXT    NOT NULL UNIQUE,
-    password_hash TEXT    NOT NULL,
-    bio           TEXT    NOT NULL DEFAULT '',
-    region        TEXT    NOT NULL DEFAULT '',
-    rating        REAL    NOT NULL DEFAULT 5.0,
-    balance       INTEGER NOT NULL DEFAULT 0,
-    is_active     INTEGER NOT NULL DEFAULT 1,
-    is_admin      INTEGER NOT NULL DEFAULT 0,
-    created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    username        TEXT    NOT NULL UNIQUE,
+    password_hash   TEXT    NOT NULL,
+    bio             TEXT    NOT NULL DEFAULT '',
+    region          TEXT    NOT NULL DEFAULT '',
+    rating          REAL    NOT NULL DEFAULT 5.0,
+    balance         INTEGER NOT NULL DEFAULT 0,
+    is_active       INTEGER NOT NULL DEFAULT 1,
+    is_admin        INTEGER NOT NULL DEFAULT 0,
+    failed_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until    TEXT,
+    created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ----------------------------------------------------------------
@@ -165,4 +167,18 @@ CREATE INDEX idx_conv_seller      ON conversation (seller_id);
 CREATE INDEX idx_message_conv     ON message (conversation_id);
 CREATE INDEX idx_reaction_message ON message_reaction (message_id);
 CREATE INDEX idx_global_created   ON global_message (id);
+
+-- ----------------------------------------------------------------
+-- 관리자 조치 감사 로그
+-- ----------------------------------------------------------------
+CREATE TABLE admin_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id    INTEGER NOT NULL,
+    action      TEXT    NOT NULL,
+    target_type TEXT,
+    target_id   INTEGER,
+    detail      TEXT    NOT NULL DEFAULT '',
+    created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (admin_id) REFERENCES user (id) ON DELETE CASCADE
+);
 CREATE INDEX idx_report_target    ON report (target_type, target_id);

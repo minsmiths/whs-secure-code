@@ -155,7 +155,13 @@
           },
           body: "body=" + encodeURIComponent(body)
         })
-          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (r) {
+            if (r.status === 429) {
+              window.alert("메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도하세요.");
+              return null;
+            }
+            return r.ok ? r.json() : null;
+          })
           .then(function (d) {
             if (d && d.ok) { input.value = ""; poll(); }
           })

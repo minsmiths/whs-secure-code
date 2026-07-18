@@ -1,5 +1,6 @@
 """회원가입 / 로그인 / 로그아웃 / 마이페이지."""
 import re
+from datetime import datetime, timedelta, timezone
 
 from flask import (
     Blueprint, current_app, flash, g, redirect, render_template, request,
@@ -77,9 +78,16 @@ def login():
             "SELECT * FROM user WHERE username = ?", (username,)
         ).fetchone()
 
+        # 계정 잠금 확인 (무차별 대입 방지)
+        if user is not None and _is_locked(user):
+            flash("로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.")
+            return render_template("auth/login.html")
+
         # 아이디 존재 여부와 무관하게 동일한 에러 메시지를 준다
         # (사용자 존재 여부 노출/열거 공격 방지)
         if user is None or not check_password_hash(user["password_hash"], password):
+            if user is not None:
+                _register_failed_login(db, user)
             flash("아이디 또는 비밀번호가 올바르지 않습니다.")
             return render_template("auth/login.html")
 
@@ -87,13 +95,55 @@ def login():
             flash("휴면 처리된 계정입니다. 관리자에게 문의하세요.")
             return render_template("auth/login.html")
 
+        # 로그인 성공 → 실패 카운터/잠금 해제
+        db.execute(
+            "UPDATE user SET failed_attempts = 0, locked_until = NULL WHERE id = ?",
+            (user["id"],),
+        )
+        db.commit()
+
         # 세션 고정 공격 방지: 로그인 시 세션을 새로 만든다
         session.clear()
+        session.permanent = True  # PERMANENT_SESSION_LIFETIME(2시간) 적용
         session["user_id"] = user["id"]
         flash(f"{user['username']}님, 환영합니다!")
         return redirect(url_for("main.index"))
 
     return render_template("auth/login.html")
+
+
+def _is_locked(user) -> bool:
+    """계정이 잠금 상태인지 확인."""
+    locked_until = user["locked_until"]
+    if not locked_until:
+        return False
+    try:
+        until = datetime.strptime(locked_until, "%Y-%m-%d %H:%M:%S").replace(
+            tzinfo=timezone.utc
+        )
+    except (ValueError, TypeError):
+        return False
+    return datetime.now(timezone.utc) < until
+
+
+def _register_failed_login(db, user) -> None:
+    """로그인 실패 카운트를 늘리고, 임계값 초과 시 계정을 잠근다."""
+    attempts = user["failed_attempts"] + 1
+    max_attempts = current_app.config["LOGIN_MAX_ATTEMPTS"]
+    if attempts >= max_attempts:
+        until = datetime.now(timezone.utc) + timedelta(
+            minutes=current_app.config["LOGIN_LOCKOUT_MINUTES"]
+        )
+        db.execute(
+            "UPDATE user SET failed_attempts = ?, locked_until = ? WHERE id = ?",
+            (attempts, until.strftime("%Y-%m-%d %H:%M:%S"), user["id"]),
+        )
+    else:
+        db.execute(
+            "UPDATE user SET failed_attempts = ? WHERE id = ?",
+            (attempts, user["id"]),
+        )
+    db.commit()
 
 
 @bp.route("/logout")

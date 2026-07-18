@@ -26,11 +26,16 @@ Flask + SQLite 기반의 소규모 중고거래 플랫폼입니다.
 | CSRF | Flask-WTF `CSRFProtect` 전역 적용 (폼·fetch 모두 토큰 검증) |
 | 비밀번호 유출 | 평문 저장 금지, Werkzeug PBKDF2 해싱 |
 | 세션 탈취 | 쿠키 `HttpOnly` / `SameSite=Lax` / (운영 시)`Secure`, 로그인 시 세션 재발급 |
+| 세션 만료 | `PERMANENT_SESSION_LIFETIME`(2시간) 후 재로그인 |
+| 무차별 대입 | 로그인 5회 실패 시 계정 10분 잠금, 성공 시 초기화 |
 | 접근제어(IDOR) | `login_required`·`admin_required`, 소유자/참여자 검증(상품 삭제·채팅방·메시지 수정/삭제) |
 | 송금 악용 | 금액 양수 검증, `balance >= amount` 조건부 차감으로 이중지불·음수잔액 방지, 실패 시 롤백 |
-| 파일 업로드 | 확장자 화이트리스트, 파일명 무작위 재생성, 5MB 제한 (상품·채팅 공용 유틸) |
+| 파일 업로드 | 확장자 화이트리스트 + **매직바이트 MIME 검증**, 파일명 무작위 재생성, 5MB 제한 |
+| 채팅 도배/스팸 | 사용자별 Rate Limiting(5초 내 8회) |
+| 관리자 감사 | 조치 이력을 `admin_log`에 기록·표시 |
 | 민감정보 하드코딩 | `SECRET_KEY` 등 환경 변수(`.env`)로 분리, 운영 시 필수화 |
 | 클릭재킹/스니핑 | `X-Frame-Options`, `X-Content-Type-Options` 헤더 |
+| 전송 암호화 | 운영 시 `Secure` 쿠키 + `HSTS` 헤더 자동 적용 |
 
 ---
 

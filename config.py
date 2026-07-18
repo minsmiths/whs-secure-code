@@ -5,6 +5,7 @@
 """
 import os
 import secrets
+from datetime import timedelta
 
 
 def _get_secret_key() -> str:
@@ -42,10 +43,27 @@ class Config:
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024  # 5MB 업로드 제한
     ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
+    IS_PRODUCTION = os.environ.get("FLASK_ENV") == "production"
+
     # === 세션 쿠키 보안 ===
     SESSION_COOKIE_HTTPONLY = True   # JS에서 쿠키 접근 차단 (XSS 완화)
     SESSION_COOKIE_SAMESITE = "Lax"  # CSRF 완화
-    SESSION_COOKIE_SECURE = _as_bool(os.environ.get("SESSION_COOKIE_SECURE"), False)
+    # 운영 환경에서는 HTTPS 전용 쿠키를 기본 강제(명시적 override 가능)
+    SESSION_COOKIE_SECURE = _as_bool(
+        os.environ.get("SESSION_COOKIE_SECURE"), default=IS_PRODUCTION
+    )
+
+    # === 세션 만료(timeout) ===
+    # 마지막 활동 이후 이 시간이 지나면 세션 만료(재로그인 필요)
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
+
+    # === 로그인 실패 방어(무차별 대입 방지) ===
+    LOGIN_MAX_ATTEMPTS = 5       # 연속 실패 허용 횟수
+    LOGIN_LOCKOUT_MINUTES = 10   # 초과 시 잠금 시간(분)
+
+    # === 채팅 메시지 Rate Limiting(도배/스팸 방지) ===
+    CHAT_RATE_MAX = 8            # 윈도우 내 최대 전송 횟수
+    CHAT_RATE_WINDOW_SEC = 5     # 윈도우 크기(초)
 
     # 신고 임계값 (이 이상 신고되면 상품 차단 / 유저 휴면)
     REPORT_BLOCK_THRESHOLD = 3

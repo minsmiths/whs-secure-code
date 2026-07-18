@@ -60,6 +60,11 @@ def create_app(config_class: type = Config) -> Flask:
             "style-src 'self' 'unsafe-inline'; "
             "script-src 'self'"
         )
+        # 운영(HTTPS) 환경에서는 HSTS 로 전송 구간 암호화를 강제
+        if app.config.get("IS_PRODUCTION"):
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         return response
 
     # === 블루프린트 등록 ===

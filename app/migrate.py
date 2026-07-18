@@ -17,6 +17,8 @@ EXPECTED_COLUMNS = {
         "balance": "INTEGER NOT NULL DEFAULT 0",
         "is_active": "INTEGER NOT NULL DEFAULT 1",
         "is_admin": "INTEGER NOT NULL DEFAULT 0",
+        "failed_attempts": "INTEGER NOT NULL DEFAULT 0",
+        "locked_until": "TEXT",
     },
     "product": {
         "brand": "TEXT NOT NULL DEFAULT ''",
@@ -41,6 +43,17 @@ EXPECTED_TABLES = {
         "body TEXT NOT NULL, "
         "created_at TEXT NOT NULL DEFAULT (datetime('now')), "
         "FOREIGN KEY (sender_id) REFERENCES user (id) ON DELETE CASCADE)"
+    ),
+    "admin_log": (
+        "CREATE TABLE IF NOT EXISTS admin_log ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "admin_id INTEGER NOT NULL, "
+        "action TEXT NOT NULL, "
+        "target_type TEXT, "
+        "target_id INTEGER, "
+        "detail TEXT NOT NULL DEFAULT '', "
+        "created_at TEXT NOT NULL DEFAULT (datetime('now')), "
+        "FOREIGN KEY (admin_id) REFERENCES user (id) ON DELETE CASCADE)"
     ),
 }
 

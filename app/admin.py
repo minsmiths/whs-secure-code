@@ -5,13 +5,23 @@
 - 사용자 휴면/복구, 상품 차단/해제/삭제
 """
 from flask import (
-    Blueprint, abort, flash, redirect, render_template, request, url_for
+    Blueprint, abort, flash, g, redirect, render_template, request, url_for
 )
 
 from .db import get_db
 from .security import admin_required
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+def _audit(db, action: str, target_type: str = None, target_id: int = None,
+           detail: str = "") -> None:
+    """관리자 조치를 감사 로그에 기록한다."""
+    db.execute(
+        "INSERT INTO admin_log (admin_id, action, target_type, target_id, detail) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (g.user["id"], action, target_type, target_id, detail),
+    )
 
 
 @bp.route("/")
@@ -61,9 +71,16 @@ def dashboard():
         "ORDER BY p.created_at DESC"
     ).fetchall()
 
+    logs = db.execute(
+        "SELECT l.*, u.username AS admin_name "
+        "FROM admin_log l JOIN user u ON l.admin_id = u.id "
+        "ORDER BY l.id DESC LIMIT 30"
+    ).fetchall()
+
     return render_template(
         "admin/dashboard.html",
         stats=stats, reports=reports_view, users=users, products=products,
+        logs=logs,
     )
 
 
@@ -79,6 +96,8 @@ def toggle_user(user_id: int):
         return redirect(url_for("admin.dashboard"))
     new_state = 0 if user["is_active"] else 1
     db.execute("UPDATE user SET is_active = ? WHERE id = ?", (new_state, user_id))
+    _audit(db, "user_activate" if new_state else "user_dormant",
+           "user", user_id, user["username"])
     db.commit()
     flash(f"{user['username']} 계정을 {'활성화' if new_state else '휴면 처리'}했습니다.")
     return redirect(url_for("admin.dashboard"))
@@ -105,6 +124,7 @@ def product_status(product_id: int):
         msg = "상품을 삭제했습니다."
     else:
         abort(400)
+    _audit(db, f"product_{action}", "product", product_id, product["title"])
     db.commit()
     flash(msg)
     return redirect(url_for("admin.dashboard"))

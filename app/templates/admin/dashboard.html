@@ -98,5 +98,24 @@
     {% endfor %}
   </div>
 
+  <div class="section-head"><span class="section-title">관리자 활동 로그</span></div>
+  {% if logs %}
+    <div class="admin-list">
+      {% for l in logs %}
+        <div class="admin-row">
+          <div class="admin-row-body">
+            <div class="admin-row-title">{{ l['admin_name'] }} · {{ l['action'] }}</div>
+            <div class="admin-row-meta">
+              {% if l['target_type'] %}{{ l['target_type'] }} #{{ l['target_id'] }}
+              {% if l['detail'] %}· {{ l['detail'] }}{% endif %} · {% endif %}{{ l['created_at']|timeago }}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty" style="padding:20px">아직 활동 로그가 없습니다.</div>
+  {% endif %}
+
 </main>
 {% endblock %}

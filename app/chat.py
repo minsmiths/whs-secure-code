@@ -7,17 +7,28 @@
 from datetime import datetime, timezone
 
 from flask import (
-    Blueprint, abort, flash, g, jsonify, redirect, render_template, request, url_for
+    Blueprint, abort, current_app, flash, g, jsonify, redirect,
+    render_template, request, url_for
 )
 
 from .db import get_db
 from .filters import timeago
+from .ratelimit import allow
 from .security import login_required
 from .uploads import save_image
 
 bp = Blueprint("chat", __name__, url_prefix="/chat")
 
 MAX_MESSAGE_LEN = 1000
+
+
+def _chat_rate_ok() -> bool:
+    """현재 사용자의 채팅 전송 빈도 제한 확인(도배 방지)."""
+    return allow(
+        f"chat:{g.user['id']}",
+        current_app.config["CHAT_RATE_MAX"],
+        current_app.config["CHAT_RATE_WINDOW_SEC"],
+    )
 
 
 # ============================================================
@@ -65,6 +76,8 @@ def global_send():
         return jsonify({"error": "empty"}), 400
     if len(body) > MAX_MESSAGE_LEN:
         return jsonify({"error": "too_long"}), 400
+    if not _chat_rate_ok():
+        return jsonify({"error": "rate_limited"}), 429
     db = get_db()
     cur = db.execute(
         "INSERT INTO global_message (sender_id, body) VALUES (?, ?)",
@@ -225,6 +238,8 @@ def room(conv_id: int):
             flash("메시지를 입력하세요.")
         elif len(body) > MAX_MESSAGE_LEN:
             flash(f"메시지는 {MAX_MESSAGE_LEN}자 이하여야 합니다.")
+        elif not _chat_rate_ok():
+            flash("메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도하세요.")
         else:
             db.execute(
                 "INSERT INTO message (conversation_id, sender_id, body, image_path) "

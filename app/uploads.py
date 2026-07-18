@@ -23,6 +23,19 @@ def allowed_image(filename: str) -> bool:
     return ext is not None and ext in current_app.config["ALLOWED_IMAGE_EXTENSIONS"]
 
 
+def _sniff_image_type(header: bytes) -> str | None:
+    """파일 앞부분(매직 바이트)으로 실제 이미지 형식을 추정. 모르면 None."""
+    if header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if header.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if header.startswith(b"GIF87a") or header.startswith(b"GIF89a"):
+        return "gif"
+    if header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
 def save_image(file_storage) -> str | None:
     """업로드된 이미지를 저장하고 static 기준 상대경로(uploads/xxx)를 반환.
 
@@ -40,6 +53,13 @@ def save_image(file_storage) -> str | None:
     ext = _extract_ext(file_storage.filename)
     if ext is None or ext not in current_app.config["ALLOWED_IMAGE_EXTENSIONS"]:
         raise ValueError("허용되지 않은 이미지 형식입니다. (png, jpg, jpeg, gif, webp)")
+
+    # 파일 '내용'(매직 바이트)이 실제 이미지인지 확인 → 확장자 위장 업로드 차단
+    header = file_storage.stream.read(16)
+    file_storage.stream.seek(0)
+    sniffed = _sniff_image_type(header)
+    if sniffed is None:
+        raise ValueError("이미지 파일이 아닙니다. (내용 검증 실패)")
 
     random_name = f"{secrets.token_hex(16)}.{ext}"
     save_path = os.path.join(current_app.config["UPLOAD_FOLDER"], random_name)
