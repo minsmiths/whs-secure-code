@@ -5,6 +5,7 @@
 
 PRAGMA foreign_keys = ON;
 
+DROP TABLE IF EXISTS admin_log;
 DROP TABLE IF EXISTS global_message;
 DROP TABLE IF EXISTS message_reaction;
 DROP TABLE IF EXISTS message;
