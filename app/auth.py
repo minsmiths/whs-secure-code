@@ -9,6 +9,7 @@ from flask import (
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from .db import get_db
+from .ratelimit import allow
 from .security import login_required
 
 bp = Blueprint("auth", __name__, url_prefix="/auth")
@@ -70,6 +71,16 @@ def login():
         return redirect(url_for("main.index"))
 
     if request.method == "POST":
+        # IP 단위 속도 제한: 아이디 존재 여부와 무관하게 로그인 폼 자체에 대한
+        # 무차별 대입/자격증명 스터핑을 차단한다.
+        if not allow(
+            f"login:{request.remote_addr}",
+            current_app.config["LOGIN_IP_MAX_ATTEMPTS"],
+            current_app.config["LOGIN_IP_WINDOW_SEC"],
+        ):
+            flash("로그인 시도가 너무 많습니다. 잠시 후 다시 시도하세요.")
+            return render_template("auth/login.html")
+
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 

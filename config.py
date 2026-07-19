@@ -58,8 +58,12 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(hours=2)
 
     # === 로그인 실패 방어(무차별 대입 방지) ===
+    # (1) 계정 단위 잠금: 존재하는 특정 계정을 겨냥한 공격 방어
     LOGIN_MAX_ATTEMPTS = 5       # 연속 실패 허용 횟수
     LOGIN_LOCKOUT_MINUTES = 10   # 초과 시 잠금 시간(분)
+    # (2) IP 단위 속도 제한: 존재하지 않는 아이디로의 무차별 대입/자격증명 스터핑 방어
+    LOGIN_IP_MAX_ATTEMPTS = 10   # 한 IP가 윈도우 내 허용하는 로그인 시도 횟수
+    LOGIN_IP_WINDOW_SEC = 300    # 윈도우 크기(초)
 
     # === 채팅 메시지 Rate Limiting(도배/스팸 방지) ===
     CHAT_RATE_MAX = 8            # 윈도우 내 최대 전송 횟수
