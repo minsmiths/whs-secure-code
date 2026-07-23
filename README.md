@@ -13,6 +13,7 @@ Flask + SQLite 기반의 소규모 중고거래 플랫폼입니다.
 - **상품 관리** — 상품 등록(이미지 업로드) / 목록 / 상세 / 내 상품 관리 / 삭제 / 검색 / 카테고리 필터
 - **찜(좋아요)** — 상품 찜 토글 및 찜 목록
 - **1:1 채팅** — 구매자↔판매자 채팅방, 채팅 목록(안읽음 배지), **사진 전송**, 메시지 수정·삭제·공감, 채팅방 나가기
+- **실시간 전체 채팅** — 모든 사용자가 참여하는 채팅방(채팅 목록 최상단 고정), 2초 폴링 기반 실시간 갱신
 - **송금** — 유저 간 잔액 이체 및 거래 내역
 - **신고/차단** — 상품·사용자 신고, 누적 신고 시 상품 자동 차단 / 사용자 휴면 전환
 - **관리자** — 대시보드(통계·신고 내역), 사용자 휴면/복구, 상품 차단/해제/삭제
@@ -24,10 +25,10 @@ Flask + SQLite 기반의 소규모 중고거래 플랫폼입니다.
 | SQL Injection | 모든 쿼리 파라미터 바인딩(`?`) 사용 |
 | XSS | Jinja2 자동 이스케이프, CSP 헤더 |
 | CSRF | Flask-WTF `CSRFProtect` 전역 적용 (폼·fetch 모두 토큰 검증) |
-| 비밀번호 유출 | 평문 저장 금지, Werkzeug PBKDF2 해싱 |
+| 비밀번호 유출 | 평문 저장 금지, Werkzeug scrypt 해싱 |
 | 세션 탈취 | 쿠키 `HttpOnly` / `SameSite=Lax` / (운영 시)`Secure`, 로그인 시 세션 재발급 |
 | 세션 만료 | `PERMANENT_SESSION_LIFETIME`(2시간) 후 재로그인 |
-| 무차별 대입 | 로그인 5회 실패 시 계정 10분 잠금, 성공 시 초기화 |
+| 무차별 대입 | (계정) 로그인 5회 실패 시 10분 잠금 + (IP) 5분 내 10회 초과 시 차단 |
 | 접근제어(IDOR) | `login_required`·`admin_required`, 소유자/참여자 검증(상품 삭제·채팅방·메시지 수정/삭제) |
 | 송금 악용 | 금액 양수 검증, `balance >= amount` 조건부 차감으로 이중지불·음수잔액 방지, 실패 시 롤백 |
 | 파일 업로드 | 확장자 화이트리스트 + **매직바이트 MIME 검증**, 파일명 무작위 재생성, 5MB 제한 |
@@ -71,13 +72,15 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ```bash
 export FLASK_APP=run.py          # Windows(PowerShell): $env:FLASK_APP="run.py"
-flask init-db                    # 테이블 생성
-flask seed                       # (선택) 관리자 계정 + 샘플 상품 생성
+flask reset-db                   # 테이블 생성 + 샘플 데이터 삽입 (한 번에)
 ```
 
-`flask seed` 실행 시 기본 계정:
+> `flask init-db`(테이블만)와 `flask seed`(샘플 데이터만)를 따로 실행할 수도 있습니다.
+> 코드를 갱신(`git pull`)한 뒤 새 컬럼이 추가된 경우, **서버 재시작 시 자동 마이그레이션**이 빠진 컬럼을 채워줍니다(데이터 보존).
+
+`flask reset-db` 실행 시 기본 계정:
 - 관리자: `admin` / `admin-Deuce-2026!` (환경변수 `ADMIN_PASSWORD`로 변경 가능)
-- 샘플 판매자: `tennislover` / `password-1234!`
+- 샘플 사용자: `minsmith`, `courtking`, `baseliner` / 공통 비밀번호 `password-1234!`
 
 > ⚠️ 데모용 계정이므로 실제 배포 시 반드시 삭제/변경하세요.
 
@@ -104,12 +107,14 @@ whs-secure-code/
 │   ├── db.py              # SQLite 커넥션 관리
 │   ├── schema.sql         # DB 스키마
 │   ├── security.py        # 인증/인가 유틸 (login_required / admin_required)
-│   ├── uploads.py         # 안전한 이미지 업로드 공용 유틸
+│   ├── uploads.py         # 안전한 이미지 업로드 (확장자+매직바이트 검증)
+│   ├── ratelimit.py       # 요청 속도 제한 (로그인·채팅 도배 방지)
+│   ├── migrate.py         # 서버 시작 시 스키마 자동 보정
 │   ├── filters.py         # Jinja 필터 (timeago / krw / placeholder)
 │   ├── auth.py            # 회원가입/로그인/마이페이지
 │   ├── products.py        # 상품 CRUD + 검색
 │   ├── favorites.py       # 찜(좋아요)
-│   ├── chat.py            # 1:1 채팅 + 사진 + 수정/삭제/공감
+│   ├── chat.py            # 1:1 채팅 + 실시간 전체 채팅 + 사진 + 수정/삭제/공감
 │   ├── transfer.py        # 유저 간 송금
 │   ├── report.py          # 신고 / 자동 차단
 │   ├── admin.py           # 관리자 페이지
